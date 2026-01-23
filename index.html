@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Hlásenie – Transfúzie FINAL v1.34</title>
+<title>Hlásenie – Transfúzie FINAL v1.36 O2-Fix</title>
 
 <style>
   :root{
@@ -115,6 +115,7 @@
     opacity: 0.55;
     transform: scale(0.99);
     filter: grayscale(0.4);
+    scroll-margin-top: 140px; /* FIX SCROLL */
   }
 
   .card.patientCard.active-card {
@@ -176,6 +177,29 @@
   @media (max-width: 740px){
     .mini4{grid-template-columns: repeat(2,1fr);}
   }
+  
+  /* Stĺpce pre kyslík */
+  .mini3{
+    display:grid;
+    grid-template-columns: repeat(3,1fr);
+    gap:10px;
+    margin-bottom:10px;
+  }
+  @media (max-width: 740px){
+    .mini3{grid-template-columns: 1fr;}
+  }
+  
+  /* Špeciálny layout pre O2 keď je zapnuté */
+  .oxy-layout {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+  }
+  .oxy-layout > div {
+      flex: 1;
+      min-width: 120px;
+  }
+
 
   .checks{
     display:flex; gap:10px; flex-wrap:wrap;
@@ -335,9 +359,9 @@
   <div class="wrap">
     <div class="top">
       <div>
-        <h1>Hlásenie v1.34 (HK & DayFix & InzFix)</h1>
+        <h1>Hlásenie v1.36 (O2-Fix & Scroll)</h1>
         <div class="subtitle">
-          HK: Dnes x (y x), Deň (chir) podľa dátumu hlásenia, Inz. možnosť nevyplnené
+          HK: Dnes x (y x), O2: p.p. = skryté polia
         </div>
         <div class="file-status" id="statusBox" style="display:none;">
           <div class="dot" id="statusDot"></div>
@@ -405,9 +429,9 @@
 </main>
 
 <script>
-  const STORAGE_KEY = "HLASENIE_V132_HK_FONTS";
+  const STORAGE_KEY = "HLASENIE_V136_O2_FIX";
 
-  // --- FOCUS MODE LOGIC ---
+  // --- FOCUS MODE LOGIC (SCROLL START) ---
   function focusPatient(i){
     document.querySelectorAll('.patientCard').forEach(c => c.classList.remove('active-card'));
     document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
@@ -415,7 +439,7 @@
     const btn = document.getElementById(`nav_btn_${i}`);
     if(card) {
       card.classList.add('active-card');
-      card.scrollIntoView({behavior: "smooth", block: "center"});
+      card.scrollIntoView({behavior: "smooth", block: "start"});
     }
     if(btn) btn.classList.add('active');
   }
@@ -759,6 +783,42 @@
         </div>
          
         <div class="subBlock">
+             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+               <label style="margin:0;">Kyslíková terapia</label>
+               <div class="checks" style="background:transparent; border:none; padding:0;">
+                 <label><input type="checkbox" data-k="p${i}_oxy_on" onchange="syncPatient(${i})" /> Aktivovať</label>
+               </div>
+             </div>
+             <div id="oxy_box_${i}" class="hidden">
+                 <div class="oxy-layout">
+                    <div>
+                       <label>Režim</label>
+                       <select data-k="p${i}_oxy_mode" onchange="syncPatient(${i})">
+                         <option value="kontinuálne">Kontinuálne</option>
+                         <option value="intermitentne">Intermitentne</option>
+                         <option value="p.p.">p.p.</option>
+                       </select>
+                    </div>
+                    <div id="oxy_config_${i}">
+                        <div class="row" style="margin-bottom:0;">
+                           <div>
+                             <label>Prietok (l/min)</label>
+                             <input type="number" data-k="p${i}_oxy_flow" placeholder="2" />
+                           </div>
+                           <div>
+                             <label>Spôsob</label>
+                             <select data-k="p${i}_oxy_method">
+                               <option value="masku">Maska</option>
+                               <option value="okuliare">Okuliare</option>
+                               <option value="High-Flow Nasal">High-Flow Nasal</option>
+                             </select>
+                           </div>
+                        </div>
+                    </div>
+                 </div>
+             </div>
+        </div>
+        <div class="subBlock">
           <label>Transport / Preklad / DH</label>
           <div class="row">
             <div>
@@ -1034,6 +1094,22 @@
     // Inzulin sync
     const inzOn = !!getVal(`p${i}_inz_on`);
     document.getElementById(`inz_box_${i}`)?.classList.toggle("hidden", !inzOn);
+    
+    // OXYGEN SYNC (NEW LOGIC)
+    const oxyOn = !!getVal(`p${i}_oxy_on`);
+    const oxyBox = document.getElementById(`oxy_box_${i}`);
+    oxyBox?.classList.toggle("hidden", !oxyOn);
+    
+    if (oxyOn) {
+        const mode = getVal(`p${i}_oxy_mode`);
+        const configBox = document.getElementById(`oxy_config_${i}`);
+        // Ak je p.p. tak skryjeme config, inak zobrazime
+        if (mode === "p.p.") {
+            configBox?.classList.add("hidden");
+        } else {
+            configBox?.classList.remove("hidden");
+        }
+    }
      
     // SYNC BLOOD VISIBILITY
     syncBloodVisibility(i);
@@ -1591,6 +1667,19 @@
       // -- MOVED PV and MM HERE --
       if(getVal(`p${i}_pv_check`)) addComma(parts, "P+V");
       if(getVal(`p${i}_mm_on`)) addComma(parts, `MM: ${getVal(`p${i}_mm_value`)}`);
+      
+      // -- OXYGEN THERAPY (NEW LOGIC) --
+      if(getVal(`p${i}_oxy_on`)){
+        const mode = getVal(`p${i}_oxy_mode`);
+        if(mode === "p.p."){
+            addComma(parts, "O2 p.p.");
+        } else {
+            const flow = getVal(`p${i}_oxy_flow`);
+            const method = getVal(`p${i}_oxy_method`);
+            // Format: kontinuálne inhaluje O2 2 l/min cez masku
+            addComma(parts, `${mode} inhaluje O2 ${flow} l/min cez ${method}`);
+        }
+      }
 
       if(getVal(`p${i}_peg_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_peg_date`)); addComma(parts, d ? `PEG ${d}`:"PEG"); }
       if(getVal(`p${i}_ngs_on`)){ 
@@ -1785,7 +1874,7 @@
   function exportJSON(){
     save(true);
     const blob = new Blob([localStorage.getItem(STORAGE_KEY)||"{}"], {type:"application/json"});
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "Hlasenie_v134_Inz_Fix.json";
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "Hlasenie_v136_O2.json";
     document.body.appendChild(a); a.click(); a.remove();
   }
 
