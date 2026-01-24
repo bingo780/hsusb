@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Koronárna JIS – Hlásenie v1.43 (Print Fix)</title>
+<title>Koronárna JIS – Hlásenie v1.46 (Desktop Final + ODBERY)</title>
 
 <style>
   /* --- THEME VARIABLES --- */
@@ -19,8 +19,8 @@
     --danger-bg: #fef2f2;
     --ok: #16a34a;           
     --warn: #d97706;         
-    --radius: 6px;           
-    --shadow: 0 1px 3px rgba(0,0,0,0.1); 
+    --radius: 8px;           
+    --shadow: 0 2px 5px rgba(0,0,0,0.08); 
     --input-bg: #f8fafc;
   }
 
@@ -28,11 +28,11 @@
 
   body {
     margin: 0;
-    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
     background: var(--bg);
     color: var(--text);
-    padding-bottom: 40px; 
-    font-size: 13px;
+    padding-bottom: 60px; 
+    font-size: 14px;
   }
 
   /* --- HEADER & NAVIGATION --- */
@@ -42,13 +42,13 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    padding: 10px 15px;
   }
 
   .wrap {
-    max-width: 1800px;
+    max-width: 1900px;
     margin: 0 auto;
-    padding: 10px;
   }
 
   .top-row-container {
@@ -56,57 +56,79 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 15px;
     margin-bottom: 10px;
   }
 
-  h1 { font-size: 18px; margin: 0; color: var(--primary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-  .subtitle { font-size: 11px; color: var(--muted); }
+  h1 { font-size: 20px; margin: 0; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .subtitle { font-size: 12px; color: var(--muted); }
 
-  /* --- NEW NAVIGATION BAR (STATIC TOP) --- */
+  /* --- LINK BAR (5 ODKAZOV) --- */
+  .link-bar {
+      display: flex;
+      gap: 8px;
+      padding: 4px;
+      background: #e2e8f0;
+      border-radius: 8px;
+      overflow-x: auto;
+  }
+  .link-btn {
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 12px;
+      color: #334155;
+      background: #fff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+      display: flex; align-items: center; gap: 5px;
+      white-space: nowrap;
+  }
+  .link-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+  .link-btn.highlight { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  /* --- NAVIGÁCIA (1-5) --- */
   .nav-bar {
       display: flex;
       gap: 5px;
       background: #f1f5f9;
       padding: 5px;
-      border-radius: 6px;
-      overflow-x: auto; 
+      border-radius: 8px;
   }
-
   .nav-btn {
-      width: 35px;
-      height: 35px;
+      width: 40px;
+      height: 40px;
       border: 1px solid var(--border);
       background: #fff;
       color: var(--text);
       font-weight: bold;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: all 0.2s;
+      font-size: 15px;
   }
   .nav-btn:hover { background: var(--primary-light); border-color: var(--primary); }
-  .nav-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-  
-  .nav-btn.all-btn { width: auto; padding: 0 10px; font-size: 12px; }
+  .nav-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 0 10px rgba(2,132,199,0.4); }
+  .nav-btn.all-btn { width: auto; padding: 0 15px; }
 
   /* --- TOOLS ROW --- */
-  .btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btnrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
 
-  /* --- BUTTONS --- */
   button {
     border: 1px solid var(--border);
     background: #fff;
     color: var(--text);
-    padding: 6px 12px;
-    border-radius: 4px;
+    padding: 8px 14px;
+    border-radius: 6px;
     font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
     font-family: inherit;
-    font-weight: 500;
+    font-weight: 600;
   }
-  button:hover { background: #f1f5f9; border-color: #94a3b8; }
+  button:hover { background: #f8fafc; border-color: #94a3b8; }
   
   button.primary { background: var(--primary); color: white; border-color: var(--primary); }
   button.primary:hover { background: #0369a1; }
@@ -114,7 +136,7 @@
   button.danger { background: #fff; color: var(--danger); border-color: var(--border); }
   button.danger:hover { background: var(--danger); color: white; border-color: var(--danger); }
 
-  button.mini { padding: 2px 8px; font-size: 11px; border-radius: 3px; }
+  button.mini { padding: 4px 10px; font-size: 11px; border-radius: 4px; }
 
   button.usb-btn { border: 1px solid var(--warn); color: var(--warn); background: #fff; }
   button.usb-btn:hover { background: #fffbeb; }
@@ -144,124 +166,110 @@
 
   .cardhead {
     background: #f8fafc;
-    padding: 8px 12px;
+    padding: 10px 15px;
     border-bottom: 1px solid var(--border);
     display: flex; justify-content: space-between; align-items: center;
   }
-  .cardhead b { font-size: 14px; color: var(--primary); }
+  .cardhead b { font-size: 15px; color: var(--primary); }
 
-  .content { padding: 12px; }
+  .content { padding: 15px; }
 
-  /* --- PATIENT CARD GRID (DEFAULT DESKTOP) --- */
-  .patientCard {
-    opacity: 1; 
-    transition: all 0.3s;
-    border: 1px solid var(--border);
-  }
+  /* --- PATIENT CARD GRID --- */
+  .patientCard { opacity: 1; border: 1px solid var(--border); transition: all 0.2s; }
   .patient-hidden { display: none !important; }
 
-  /* GRID LAYOUT (DESKTOP) */
+  /* Default Desktop Grid: 4 columns */
   .patientCard .content {
     display: grid;
     grid-template-columns: repeat(4, 1fr); 
-    gap: 15px; 
+    gap: 20px; 
     align-items: start;
   }
 
   .patientCard .mini4, 
-  .patientCard .row.top-row 
-  {
-    grid-column: 1 / -1;
-  }
+  .patientCard .row.top-row { grid-column: 1 / -1; }
 
-  /* --- MOBILE / TABLET OVERRIDES --- */
-  @media (max-width: 1100px) {
-      .patientCard .content {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-      }
-      .wrap { padding: 5px; }
-      
-      .cardhead { flex-direction: column; align-items: flex-start; gap: 5px; }
-      .mini4 { grid-template-columns: 1fr 1fr; }
-      
-      .top-row-container { gap: 5px; }
-      .btnrow { width: 100%; justify-content: space-between; }
-      .btnrow button { flex: 1; }
-  }
-
-  /* --- MANUAL CLASSES --- */
-  body.force-mobile .patientCard .content { display: flex; flex-direction: column; }
-  body.force-mobile .mini4 { grid-template-columns: 1fr 1fr; }
-  
-  body.force-desktop .patientCard .content { display: grid; grid-template-columns: repeat(4, 1fr); }
-  body.force-desktop .mini4 { grid-template-columns: repeat(4, 1fr); }
-
-  
   /* --- SUB BLOCKS --- */
   .subBlock {
-    break-inside: avoid; 
     background: #fff;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 8px;
+    padding: 12px;
     margin-bottom: 0;
     height: 100%; 
   }
-  
   .subBlock label:first-child {
     font-weight: 700;
     color: var(--primary);
-    border-bottom: 1px solid #f1f5f9;
-    padding-bottom: 4px;
-    margin-bottom: 8px;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 6px;
+    margin-bottom: 10px;
     display: block;
     text-transform: uppercase;
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.5px;
   }
 
-  /* --- FORMS --- */
-  label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+  /* --- FORMS (PEN OPTIMIZED) --- */
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; font-weight: 500; }
   
   input, textarea, select {
     width: 100%;
     border: 1px solid var(--border);
     background: var(--input-bg);
     color: var(--text);
-    padding: 6px 8px;
-    border-radius: 4px;
-    font-size: 14px;
+    padding: 8px 10px; 
+    border-radius: 6px;
+    font-size: 15px; 
     font-family: inherit;
     outline: none;
-    transition: border 0.2s;
+    transition: border 0.2s, box-shadow 0.2s;
+    min-height: 38px;
   }
   input:focus, textarea:focus, select:focus {
     border-color: var(--primary);
     background: #fff;
+    box-shadow: 0 0 0 3px rgba(2,132,199,0.1);
   }
-  textarea { min-height: 40px; resize: vertical; }
+  textarea { min-height: 50px; resize: vertical; }
 
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-  .mini4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .mini4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
 
   .checks {
     display: flex; gap: 8px; flex-wrap: wrap;
-    background: transparent; padding: 0; border: none;
+    padding: 0; border: none;
   }
   .checks label {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 12px; color: var(--text);
-    background: #f1f5f9; padding: 4px 8px; border-radius: 4px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--text);
+    background: #f1f5f9; padding: 6px 10px; border-radius: 6px; cursor: pointer;
+    border: 1px solid transparent;
   }
-  .checks input { width: auto; margin: 0; }
   .checks label:hover { background: #e2e8f0; }
+  .checks input { width: 18px; height: 18px; margin: 0; min-height: auto; }
+
+  /* --- RESPONSIVITY (AUTO) --- */
+  @media (max-width: 1100px) {
+      .patientCard .content { display: flex; flex-direction: column; gap: 15px; }
+      .wrap { padding: 5px; }
+      .cardhead { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .mini4 { grid-template-columns: 1fr 1fr; }
+      .top-row-container { gap: 8px; justify-content: center; }
+      .nav-bar { width: 100%; justify-content: space-between; }
+      .link-bar { width: 100%; overflow-x: auto; justify-content: flex-start; }
+  }
+
+  /* --- MANUAL CLASSES --- */
+  body.force-mobile .patientCard .content { display: flex; flex-direction: column; }
+  body.force-mobile .mini4 { grid-template-columns: 1fr 1fr; }
+  body.force-desktop .patientCard .content { display: grid; grid-template-columns: repeat(4, 1fr); }
+  body.force-desktop .mini4 { grid-template-columns: repeat(4, 1fr); }
 
   /* --- SPECIAL STYLES --- */
   .hidden { display: none !important; }
-  .inlineTools { display: flex; gap: 4px; margin-top: 4px; }
-  .badge { padding: 1px 6px; background: #e2e8f0; border-radius: 10px; font-size: 10px; }
+  .inlineTools { display: flex; gap: 5px; margin-top: 5px; }
+  .badge { padding: 2px 8px; background: #cbd5e1; border-radius: 12px; font-size: 11px; font-weight: bold; color: #0f172a; }
 
   .aaInput {
     border-color: #fca5a5 !important;
@@ -270,27 +278,27 @@
     font-weight: bold;
   }
   
-  .iso-input-group { display: flex; align-items: center; gap: 5px; }
+  .iso-input-group { display: flex; align-items: center; gap: 8px; }
   .iso-input-group input[type="text"] { flex: 1; }
   
-  .exitus-label { color: var(--danger); font-weight: bold; }
+  .exitus-label { color: var(--danger); font-weight: bold; background: #fee2e2 !important; border-color: #fca5a5 !important; }
 
   details {
     border: 1px solid var(--border);
-    padding: 4px 8px;
-    border-radius: 4px;
-    margin-top: 4px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    margin-top: 5px;
     background: #f8fafc;
   }
-  summary { font-size: 11px; font-weight: 600; cursor: pointer; }
+  summary { font-size: 12px; font-weight: 700; cursor: pointer; }
   
-  .blood-slot-container { display: none; }
+  .blood-slot-container { display: none; margin-top: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: #fafafa; }
   .blood-slot-container.active { display: block; animation: fadeIn 0.3s ease; }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  .blood-summary-text { font-size: 11px; color: var(--ok); margin-left: 6px; font-weight: 600; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+  .blood-summary-text { font-size: 12px; color: var(--ok); margin-left: 8px; font-weight: 700; }
   
-  .oxy-layout { display: flex; gap: 8px; flex-wrap: wrap; }
-  .oxy-layout > div { flex: 1; min-width: 100px; }
+  .oxy-layout { display: flex; gap: 10px; flex-wrap: wrap; }
+  .oxy-layout > div { flex: 1; min-width: 120px; }
 
 </style>
 </head>
@@ -300,11 +308,20 @@
 <header>
   <div class="wrap">
     <div class="top-row-container">
-      <div>
-        <h1>Koronárna JIS <span style="font-weight:400; font-size:14px; color:var(--muted);">| Hlásenie</span></h1>
-        <div class="subtitle">
-          v1.43 | Tlač opravená (TUEM 2 pripr...)
+      <div style="display:flex; flex-direction:column; gap:5px;">
+        <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+            <h1 style="margin:0;">KORONÁRNA JIS</h1>
+            <div class="link-bar">
+                <a href="https://bingo780.github.io/jis-dekurz/" target="_blank" class="link-btn highlight">
+                   <span>🌐</span> JIS Dekurz
+                </a>
+                <a href="#" class="link-btn" onclick="alert('Tu si môžeš nastaviť Link 2')">Link 2</a>
+                <a href="#" class="link-btn" onclick="alert('Link 3')">Link 3</a>
+                <a href="#" class="link-btn" onclick="alert('Link 4')">Link 4</a>
+                <a href="#" class="link-btn" onclick="alert('Link 5')">Link 5</a>
+            </div>
         </div>
+        <div class="subtitle">v1.46 | Pero/Tablet Mode | Import OK</div>
       </div>
       
       <div class="nav-bar">
@@ -318,11 +335,11 @@
     </div>
 
     <div class="btnrow">
-        <button class="view-toggle" onclick="toggleLayout()">📱/💻 Zobrazenie</button>
+        <button class="view-toggle" onclick="toggleLayout()">📱/💻</button>
         <button class="usb-btn" onclick="openLocalFile()">📂 Otvoriť (USB)</button>
-        <button class="primary" onclick="printFilledIOS()">🖨️ Tlač / PDF</button>
-        <button onclick="exportJSON()">Export JSON</button>
-        <button onclick="document.getElementById('fileImport').click()">Import JSON</button>
+        <button class="primary" onclick="printFilledIOS()">🖨️ Tlač</button>
+        <button onclick="exportJSON()">Export</button>
+        <button onclick="document.getElementById('fileImport').click()">Import</button>
         <button class="danger" onclick="resetAll()">Vymazať</button>
         
         <div class="file-status" id="statusBox" style="display:none;">
@@ -363,18 +380,18 @@
               <button class="mini" onclick="setHeaderDay('tomorrow')">Zajtra</button>
             </div>
           </div>
-          <div style="font-size:11px; color:var(--muted); padding-top:15px;">
-            Dátum určuje prepočet dní (chir, cvk...).<br>Tlač je bez času.
+          <div style="font-size:12px; color:var(--muted); padding-top:10px;">
+            Dátum určuje prepočet dní (chir, cvk...).
           </div>
         </div>
       </div>
 
       <div style="flex:1; min-width:300px; border-left:1px solid var(--border); padding-left:20px;">
         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-          <b style="font-size:12px;">Odídení / Exitus</b>
+          <b style="font-size:13px;">Odídení / Exitus</b>
           <span class="badge" id="leftCount">0</span>
         </div>
-        <div id="leftList" style="max-height:100px; overflow-y:auto;"></div>
+        <div id="leftList" style="max-height:120px; overflow-y:auto;"></div>
       </div>
 
     </div>
@@ -421,7 +438,7 @@
     if(btn) btn.classList.add('active');
   }
 
-  // --- USB / FILE ---
+  // --- USB / FILE / IMPORT LOGIC (FIXED) ---
   let fileHandle = null;
   let usbSaveTimer = null;
 
@@ -456,6 +473,28 @@
       if (err.name !== 'AbortError') { console.error(err); alert("Nepodarilo sa otvoriť súbor."); }
     }
   }
+
+  // IMPORTANT FIX: Standard file input listener
+  document.getElementById('fileImport').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const text = e.target.result;
+          JSON.parse(text); // Validate
+          localStorage.setItem(STORAGE_KEY, text);
+          load();
+          alert("Dáta úspešne importované ✅");
+        } catch (err) {
+          console.error(err);
+          alert("Chyba: Súbor je poškodený alebo nie je platný JSON.");
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = ''; 
+  });
 
   function scheduleSaveToDisk(){
     if(!fileHandle) return;
@@ -616,7 +655,7 @@
               <div>
                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
                     <label style="margin:0;">Izolácia</label>
-                    <input type="checkbox" data-k="p${i}_iso_on" onchange="syncPatient(${i})" style="width:auto; margin:0;" title="Zapnúť červené zvýraznenie" />
+                    <input type="checkbox" data-k="p${i}_iso_on" onchange="syncPatient(${i})" style="width:20px; height:20px; margin:0;" title="Zapnúť červené zvýraznenie" />
                  </div>
                  <input type="text" id="iso_input_${i}" data-k="p${i}_iso_reason" placeholder="Dôvod (napr. Clostridium)" style="width:100%; display:block;" />
               </div>
@@ -647,12 +686,12 @@
              </div>
           </div>
 
-          <div style="margin-top:12px; margin-bottom:12px; background:#f9f9f9; padding:5px; border-radius:4px; border:1px solid #ddd;">
-               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+          <div style="margin-top:12px; margin-bottom:12px; background:#f9f9f9; padding:8px; border-radius:6px; border:1px solid #ddd;">
+               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                    <label style="margin:0; font-weight:700; color:var(--primary);">MM (Moč)</label>
-                   <input type="checkbox" data-k="p${i}_mm_on" onchange="syncPatient(${i})" style="width:auto; margin:0;" />
+                   <input type="checkbox" data-k="p${i}_mm_on" onchange="syncPatient(${i})" style="width:20px; height:20px; margin:0;" />
                </div>
-               <div id="mm_box_${i}" class="hidden" style="margin-top:4px;">
+               <div id="mm_box_${i}" class="hidden">
                   <input data-k="p${i}_mm_value" type="text" placeholder="objem/hod" style="width:100%; display:block;" />
                </div>
           </div>
@@ -670,7 +709,7 @@
                 <div>
                    <label>Inzulín</label>
                    <div class="checks"><label><input type="checkbox" data-k="p${i}_inz_on" /> dľa glykémie</label></div>
-                   <div id="inz_box_${i}" class="hidden" style="margin-top:2px;">
+                   <div id="inz_box_${i}" class="hidden" style="margin-top:4px;">
                       <select data-k="p${i}_inz_loc"><option value="">Perá nevyplnené</option><option value="u seba">U seba</option><option value="v chladničke">V chladničke</option></select>
                    </div>
                 </div>
@@ -789,6 +828,50 @@
           <div class="inlineTools" style="margin-top:10px;">
             <button class="primary mini" type="button" onclick="activateNextBloodSlot(${i})">+ Pridať</button>
             <button class="mini danger" type="button" onclick="clearBloodAll(${i})">Zmazať všetko</button>
+          </div>
+        </div>
+
+        <div class="subBlock">
+          <label>Laboratórium / Odbery</label>
+          <div class="row">
+             <div>
+               <div class="checks">
+                 <label><input type="checkbox" data-k="p${i}_lab_odbery" /> odbery</label>
+                 <label><input type="checkbox" data-k="p${i}_lab_vytery" /> výtery</label>
+                 <label><input type="checkbox" data-k="p${i}_lab_moc" /> moč K+C</label>
+                 <label><input type="checkbox" data-k="p${i}_lab_antigeny" /> antigény</label>
+               </div>
+               <div style="margin-top:5px;">
+                  <label>Výsledky / Poznámka</label>
+                  <input type="text" data-k="p${i}_lab_note" placeholder="napr. CRP 50, TnT 120..." />
+               </div>
+             </div>
+             <div>
+               <label>Realizované (kedy)</label>
+               <input data-k="p${i}_lab_date" type="date" />
+               <div class="inlineTools">
+                 <button class="mini" onclick="setDate('p${i}_lab_date','today')">Dnes</button>
+                 <button class="mini" onclick="setDate('p${i}_lab_date','yesterday')">Včera</button>
+               </div>
+               <div style="margin-top:4px;"><label>Čas (nepovinné)</label><input data-k="p${i}_lab_time" type="time" /></div>
+             </div>
+          </div>
+          
+          <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:5px;">
+            <div class="row">
+               <div>
+                  <label>PLÁN (čo)</label>
+                  <input type="text" data-k="p${i}_lab_plan" placeholder="napr. kontrola ranné..." />
+               </div>
+               <div>
+                  <label>PLÁN (kedy)</label>
+                  <input data-k="p${i}_lab_plan_date" type="date" />
+                  <div class="inlineTools">
+                     <button class="mini" onclick="setDate('p${i}_lab_plan_date','tomorrow')">Zajtra</button>
+                     <button class="mini" onclick="setDate('p${i}_lab_plan_date','today')">Dnes</button>
+                  </div>
+               </div>
+            </div>
           </div>
         </div>
 
