@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Koronárna JIS – Hlásenie v1.46 (Desktop Final + ODBERY)</title>
+<title>Koronárna JIS – Hlásenie v1.49 (Final Logic)</title>
 
 <style>
   /* --- THEME VARIABLES --- */
@@ -321,7 +321,7 @@
                 <a href="#" class="link-btn" onclick="alert('Link 5')">Link 5</a>
             </div>
         </div>
-        <div class="subtitle">v1.46 | Pero/Tablet Mode | Import OK</div>
+        <div class="subtitle">v1.49 | Inteligentné vyšetrenia (Mal/Plan)</div>
       </div>
       
       <div class="nav-bar">
@@ -1491,7 +1491,7 @@
     syncBloodVisibility(i); // Update UI text
   }
 
-  // --- Printing (FIXED BLOOD STRING) ---
+  // --- Printing (FIXED DATE LOGIC) ---
   function addComma(parts, piece){ const t = cleanSpaces(piece); if(t) parts.push(t); }
 
   function makeDayTextFromDate(startISO){
@@ -1520,17 +1520,29 @@
 
     return (dayCount < 1) ? "" : `${dayCount}. deň`;
   }
+  
+  // NEW HELPER: Get reference date from header
+  function getPrintRefDate() {
+    return document.getElementById("handoverDay").value || todayISO();
+  }
+
+  // --- UPDATED PRINTING FUNCTIONS (FIXED) ---
 
   function examPrintStr(label, dateISO, timeStr){
     const lab = cleanSpaces(label);
     const d = cleanSpaces(dateISO);
     const t = formatTimeSK(timeStr);
     if(!lab) return null;
+    
     let txt = lab;
     if(t) txt += ` ${t}`;
      
-    if(d && isToday(d)) return { text: txt, day: "today" };
-    if(d && isTomorrow(d)) return { text: txt, day: "tomorrow" };
+    const ref = getPrintRefDate();
+    
+    // Compare with reference date instead of system time
+    if(d && d === ref) return { text: txt, day: "today" };
+    if(d && d === isoAddDays(ref, 1)) return { text: txt, day: "tomorrow" };
+    
     return { text: txt, day: "other" }; 
   }
 
@@ -1540,18 +1552,25 @@
     const typ = obe ? "obe" : "reziduálna";
     const d = cleanSpaces(dateISO);
     const t = formatTimeSK(timeStr);
-    if(d && isToday(d)) return `dnes mal: hladina ${n} ${typ}`;
-    if(d && isTomorrow(d)){
+    
+    const ref = getPrintRefDate();
+
+    if(d && d === ref) {
+        return `dnes mal: hladina ${n} ${typ}`; 
+    }
+    if(d && d === isoAddDays(ref, 1)){
       if(t) return `zajtra ${t} hladina ${n} ${typ}`;
       return `zajtra: hladina ${n} ${typ}`;
     }
     return `hladina ${n} ${typ}`;
   }
+
   function labsPrint(i){
     const note = cleanSpaces(getVal(`p${i}_lab_note`));
     const d = cleanSpaces(getVal(`p${i}_lab_date`));
     const t = formatTimeSK(getVal(`p${i}_lab_time`));
-     
+    const ref = getPrintRefDate();
+
     // Checkboxes (Done/Today)
     const sel = [];
     if(getVal(`p${i}_lab_odbery`)) sel.push("odbery");
@@ -1564,8 +1583,8 @@
        let base = sel.join(", ");
        if(note) base = base ? `${base} ${note}` : note;
        
-       if(d && isToday(d)) part1 = `dnes ${base}`;
-       else if(d && isTomorrow(d)) part1 = `zajtra ${t} ${base}`; 
+       if(d && d === ref) part1 = `dnes ${base}`;
+       else if(d && d === isoAddDays(ref, 1)) part1 = `zajtra ${t} ${base}`; 
        else part1 = base; 
     }
 
@@ -1573,9 +1592,10 @@
     const planText = cleanSpaces(getVal(`p${i}_lab_plan`));
     const planDate = cleanSpaces(getVal(`p${i}_lab_plan_date`));
     let part2 = "";
+    
     if(planText){
-      if(planDate && isTomorrow(planDate)) part2 = `zajtra ${planText}`;
-      else if(planDate && isToday(planDate)) part2 = `dnes plán: ${planText}`;
+      if(planDate && planDate === isoAddDays(ref, 1)) part2 = `zajtra ${planText}`;
+      else if(planDate && planDate === ref) part2 = `dnes plán: ${planText}`;
       else part2 = planText; 
     }
 
@@ -1583,34 +1603,37 @@
     return part1 || part2;
   }
    
-  // HK Print Logic
   function hkPrint(i){
     const d = cleanSpaces(getVal(`p${i}_hk_date`));
     const t = formatTimeSK(getVal(`p${i}_hk_time`));
     const st = ensureState();
     const list = st.hk[getHKKey(i)] || [];
      
-    const todayPrefix = todayISO();
+    // Realtime check for "already done today"
+    const todayPrefix = todayISO(); 
     const todayCount = list.filter(x => x.ts.startsWith(todayPrefix)).length;
     const totalCount = list.length;
      
     const obe = !!getVal(`p${i}_hk_obe`) ? " obe" : "";
+    const ref = getPrintRefDate();
 
+    // 1. DONE
     if(todayCount > 0){
        return `dnes odobratá ${todayCount}x HK${obe} (${totalCount}x)`;
     }
 
-    if(d && isTomorrow(d)){
+    // 2. PLANNED
+    if(d && d === isoAddDays(ref, 1)){
        let s = "zajtra";
        if(t) s += ` ${t}`;
        s += ` odobrať HK${obe}`;
        return s;
     }
 
-    if(d && isToday(d)){
+    if(d && d === ref){
        let s = "dnes";
        if(t) s += ` ${t}`;
-       s += ` odobratá HK${obe}`;
+       s += ` odobrať HK${obe}`; 
        return s;
     }
      
@@ -1619,6 +1642,8 @@
    
   function bloodPrintMulti(i){
     const lines = [];
+    const ref = getPrintRefDate();
+
     for(let s=1;s<=4;s++){
       if(!getVal(`p${i}_blood${s}_on`)) continue;
       const type = cleanSpaces(getVal(`p${i}_blood${s}_type`));
@@ -1637,7 +1662,7 @@
          parts.push(`dnes podaná ${todayGiven} ${type}`);
       }
 
-      // 2. STOCK (Combine Type with Numbers)
+      // 2. STOCK
       let stockParts = [];
       if(ready > 0) stockParts.push(`${ready} pripravené`);
       if(secured > 0) stockParts.push(`${secured} zaistené`);
@@ -1646,15 +1671,28 @@
           parts.push(`${type} ${stockParts.join(", ")}`);
       }
 
-      // 3. PLAN
-      if(d && isTomorrow(d)){
-        let p = "zajtra";
-        if(t) p += ` ${t}`;
-        p += " podať";
-        const planCount = parseInt(getVal(`p${i}_blood${s}_given_count`)||"0",10)||0;
-        if(planCount > 0) p += ` ${planCount}`;
-        p += ` ${type}`;
-        parts.push(p);
+      // 3. PLAN (FIXED)
+      if(d){
+        let p = "";
+        let isPlan = false;
+
+        if(d === ref) {
+             p = "dnes"; // Matches header date -> Today
+             isPlan = true;
+        } else if (d === isoAddDays(ref, 1)) {
+             p = "zajtra";
+             isPlan = true;
+        }
+
+        if(isPlan){
+            if(t) p += ` ${t}`;
+            p += " podať"; // Plan phrase
+            
+            const planCount = parseInt(getVal(`p${i}_blood${s}_given_count`)||"0",10)||0;
+            if(planCount > 0) p += ` ${planCount}`;
+            p += ` ${type}`;
+            parts.push(p);
+        }
       }
       
       if(parts.length > 0) lines.push(parts.join("; "));
@@ -1664,6 +1702,10 @@
 
   function buildPrintRowsSorted(){
     const items = [];
+    const ref = getPrintRefDate(); // Load Ref
+    // CHECK SHIFT TYPE for Logic
+    const shiftType = document.getElementById("shiftType").value;
+
     for(let i=1;i<=5;i++){
       const bed = cleanSpaces(getVal(`p${i}_bed`));
       if(!bed && !getVal(`p${i}_surname`)) continue;
@@ -1692,9 +1734,10 @@
 
       const parts = [];
 
-      // 1. ZAKLAD (NP, PR, EKG, Monitor, TK)
+      // 1. ZAKLAD
       const admit = cleanSpaces(getVal(`p${i}_admit_date`));
-      if(admit && isToday(admit)) addComma(parts, "NP");
+      if(admit && admit === ref) addComma(parts, "NP");
+      
       const pr = cleanSpaces(getVal(`p${i}_pr`));
       if(pr) addComma(parts, `"${pr}"`);
       if(getVal(`p${i}_ekg`)) addComma(parts, `EKG ${getVal(`p${i}_ekg`)}`);
@@ -1792,7 +1835,14 @@
            else addComma(parts, ex.text); 
         }
       }
-      if(todayExams.length > 0) addComma(parts, "dnes mal " + todayExams.join(", "));
+      // LOGIC: Check shift type for correct prefix
+      if(todayExams.length > 0) {
+          if(shiftType === "celodenna") {
+              addComma(parts, "dnes mal " + todayExams.join(", "));
+          } else {
+              addComma(parts, "dnes " + todayExams.join(", "));
+          }
+      }
       if(tomExams.length > 0) addComma(parts, "zajtra " + tomExams.join(", "));
 
       // 10. TRANSPORT / PREKLAD
@@ -1816,8 +1866,8 @@
 
           let phrase = "";
           if(transDate){
-             if(isTomorrow(transDate)) phrase += "zajtra";
-             else if(isToday(transDate)) phrase += "dnes";
+             if(transDate === isoAddDays(ref, 1)) phrase += "zajtra";
+             else if(transDate === ref) phrase += "dnes";
              else phrase += formatDateSK(transDate);
           }
           if(transDest) phrase += " " + transDest;
