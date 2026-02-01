@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Koronárna JIS – Hlásenie v1.49 (Final Logic)</title>
+<title>Koronárna JIS – Hlásenie v1.50 (Hybrid Logic)</title>
 
 <style>
   /* --- THEME VARIABLES --- */
@@ -63,7 +63,7 @@
   h1 { font-size: 20px; margin: 0; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
   .subtitle { font-size: 12px; color: var(--muted); }
 
-  /* --- LINK BAR (5 ODKAZOV) --- */
+  /* --- LINK BAR --- */
   .link-bar {
       display: flex;
       gap: 8px;
@@ -88,7 +88,7 @@
   .link-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
   .link-btn.highlight { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-  /* --- NAVIGÁCIA (1-5) --- */
+  /* --- NAVIGÁCIA --- */
   .nav-bar {
       display: flex;
       gap: 5px;
@@ -278,9 +278,6 @@
     font-weight: bold;
   }
   
-  .iso-input-group { display: flex; align-items: center; gap: 8px; }
-  .iso-input-group input[type="text"] { flex: 1; }
-  
   .exitus-label { color: var(--danger); font-weight: bold; background: #fee2e2 !important; border-color: #fca5a5 !important; }
 
   details {
@@ -299,6 +296,15 @@
   
   .oxy-layout { display: flex; gap: 10px; flex-wrap: wrap; }
   .oxy-layout > div { flex: 1; min-width: 120px; }
+  
+  /* Custom Box Style for extra fields */
+  .custom-box {
+      background: #f1f5f9;
+      border: 1px dashed var(--border);
+      padding: 8px;
+      border-radius: 6px;
+      margin-top: 8px;
+  }
 
 </style>
 </head>
@@ -319,11 +325,9 @@
                    <span>🌐</span> JIS dekurz ios </a>
                 <a href="https://bingo780.github.io/sklad/" target="_blank" class="link-btn highlight">
                    <span>🌐</span> JIS sklad </a>
-                <a href="#" class="link-btn" onclick="alert('Link 4')">Link 4</a>
-                <a href="#" class="link-btn" onclick="alert('Link 5')">Link 5</a>
             </div>
         </div>
-        <div class="subtitle">v1.49 | Inteligentné vyšetrenia (Mal/Plan)</div>
+        <div class="subtitle">v1.50 | Hybrid Logic (No Duplicates)</div>
       </div>
       
       <div class="nav-bar">
@@ -403,7 +407,7 @@
 </main>
 
 <script>
-  const STORAGE_KEY = "HLASENIE_V136_O2_FIX";
+  const STORAGE_KEY = "HLASENIE_V150_HYBRID";
 
   // --- LAYOUT TOGGLE LOGIC ---
   function toggleLayout() {
@@ -440,7 +444,7 @@
     if(btn) btn.classList.add('active');
   }
 
-  // --- USB / FILE / IMPORT LOGIC (FIXED) ---
+  // --- USB / FILE / IMPORT LOGIC ---
   let fileHandle = null;
   let usbSaveTimer = null;
 
@@ -476,7 +480,6 @@
     }
   }
 
-  // IMPORTANT FIX: Standard file input listener
   document.getElementById('fileImport').addEventListener('change', function(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -485,7 +488,7 @@
       reader.onload = function(e) {
         try {
           const text = e.target.result;
-          JSON.parse(text); // Validate
+          JSON.parse(text); 
           localStorage.setItem(STORAGE_KEY, text);
           load();
           alert("Dáta úspešne importované ✅");
@@ -556,9 +559,6 @@
     const d = iso.split("-");
     return `${d[2]}.${d[1]}.${d[0]}`.trim();
   }
-  function isTomorrow(dateISO){ return !!dateISO && dateISO === isoAddDays(todayISO(), 1); }
-  function isToday(dateISO){ return !!dateISO && dateISO === todayISO(); }
-   
   function formatTimeSK(timeStr){
     if(!timeStr) return "";
     let t = timeStr.trim();
@@ -576,7 +576,6 @@
 
   // ------- Rendering -------
   function patientTemplate(i){
-    // STATIC BLOOD SLOTS
     let bloodSlotsHTML = "";
     for(let s=1; s<=4; s++){
       bloodSlotsHTML += `
@@ -586,37 +585,23 @@
           <input type="hidden" data-k="p${i}_blood${s}_today_accumulator" value="0" />
            
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-             <div>
-               <b>Prípravok ${s}</b>
-               <span id="blood_summary_${i}_${s}" class="blood-summary-text"></span>
-             </div>
+             <div><b>Prípravok ${s}</b><span id="blood_summary_${i}_${s}" class="blood-summary-text"></span></div>
              <button class="mini danger" type="button" onclick="removeBloodSlot(${i}, ${s})">Zmazať</button>
           </div>
-
           <div class="row">
             <div><label>Typ</label><select id="p${i}_b${s}_type" data-k="p${i}_blood${s}_type"><option value="">-</option><option value="TUEM">TUEM</option><option value="ČMP">ČMP</option><option value="TK">trombokoncentrát</option></select></div>
             <div><label>Pripravené</label><input id="p${i}_b${s}_ready" data-k="p${i}_blood${s}_ready" type="number" min="0" placeholder="zostatok" /></div>
           </div>
           <div class="row">
             <div><label>Zaistené</label><input id="p${i}_b${s}_sec" data-k="p${i}_blood${s}_secured" type="number" min="0" /></div>
-            <div>
-              <label>Podané / Plán</label>
-              <div style="display:flex; gap:2px;">
-                 <input id="p${i}_b${s}_given" data-k="p${i}_blood${s}_given_count" type="number" min="0" style="width:60%" />
-                 <button class="mini ok" style="width:40%" onclick="applyBloodGiven(${i},${s})">Podať</button>
-              </div>
-            </div>
+            <div><label>Podané / Plán</label><div style="display:flex; gap:2px;"><input id="p${i}_b${s}_given" data-k="p${i}_blood${s}_given_count" type="number" min="0" style="width:60%" /><button class="mini ok" style="width:40%" onclick="applyBloodGiven(${i},${s})">Podať</button></div></div>
           </div>
           <div class="row">
-            <div>
-              <label>Kedy (dátum)</label><input id="p${i}_b${s}_date" data-k="p${i}_blood${s}_date" type="date"/>
-              <div class="inlineTools"><button class="mini" onclick="setDate('p${i}_blood${s}_date','today')">Dnes</button><button class="mini" onclick="setDate('p${i}_blood${s}_date','tomorrow')">Zajtra</button></div>
-            </div>
+            <div><label>Kedy (dátum)</label><input id="p${i}_b${s}_date" data-k="p${i}_blood${s}_date" type="date"/><div class="inlineTools"><button class="mini" onclick="setDate('p${i}_blood${s}_date','today')">Dnes</button><button class="mini" onclick="setDate('p${i}_blood${s}_date','tomorrow')">Zajtra</button></div></div>
             <div><label>Kedy (čas)</label><input id="p${i}_b${s}_time" data-k="p${i}_blood${s}_time" type="time"/></div>
           </div>
         </div>
-      </div>
-      `;
+      </div>`;
     }
 
     return `
@@ -697,6 +682,21 @@
                   <input data-k="p${i}_mm_value" type="text" placeholder="objem/hod" style="width:100%; display:block;" />
                </div>
           </div>
+          
+          <div style="margin-top:8px; border-top:1px dashed var(--border); padding-top:5px;">
+            <div class="row">
+               <div><label>Stolica</label><input data-k="p${i}_stolica" type="text" placeholder="1x" /></div>
+               <div>
+                  <div class="checks"><label><input type="checkbox" data-k="p${i}_kolo_on" onchange="syncPatient(${i})" /> Kolostómia</label></div>
+               </div>
+            </div>
+            <div id="kolo_box_${i}" class="hidden custom-box">
+                <div class="row" style="margin:0;">
+                    <div><label>Založenie</label><input data-k="p${i}_kolo_date" type="date" /></div>
+                    <div><label>Frekvencia</label><input data-k="p${i}_kolo_freq" type="text" /></div>
+                </div>
+            </div>
+          </div>
 
           <div style="margin-top:10px; border-top:1px dashed var(--border); padding-top:5px;">
              <label>Sledovať (krvácanie...)</label>
@@ -729,37 +729,42 @@
         <div class="subBlock">
           <label>Vstupy & Katétre</label>
           <div class="checks">
-            <label><input type="checkbox" data-k="p${i}_iv_chir_on" /> CHIR</label>
-            <label><input type="checkbox" data-k="p${i}_iv_cvk_on" /> CVK</label>
-            <label><input type="checkbox" data-k="p${i}_iv_hd_on" /> HD kav.</label>
-            <label><input type="checkbox" data-k="p${i}_iv_hrd_on" /> Hr drén</label>
-            <label><input type="checkbox" data-k="p${i}_pk_on" /> PK</label>
-            <label><input type="checkbox" data-k="p${i}_peg_on" /> PEG</label>
-            <label><input type="checkbox" data-k="p${i}_ngs_on" /> NGS</label>
+            <label><input type="checkbox" data-k="p${i}_iv_chir_on" onchange="syncPatient(${i})" /> CHIR</label>
+            <label><input type="checkbox" data-k="p${i}_iv_cvk_on" onchange="syncPatient(${i})" /> CVK</label>
+            <label><input type="checkbox" data-k="p${i}_iv_hd_on" onchange="syncPatient(${i})" /> HD kav.</label>
+            <label><input type="checkbox" data-k="p${i}_iv_hrd_on" onchange="syncPatient(${i})" /> Hr drén</label>
+            <label><input type="checkbox" data-k="p${i}_pk_on" onchange="syncPatient(${i})" /> PK</label>
+            <label><input type="checkbox" data-k="p${i}_peg_on" onchange="syncPatient(${i})" /> PEG</label>
+            <label><input type="checkbox" data-k="p${i}_ngs_on" onchange="syncPatient(${i})" /> NGS</label>
+            <label><input type="checkbox" data-k="p${i}_nefro_on" onchange="syncPatient(${i})" /> Nefro</label>
+            <label><input type="checkbox" data-k="p${i}_custom_in_on" onchange="syncPatient(${i})" /> Iné</label>
           </div>
           
           <div id="iv_chir_box_${i}" class="hidden row" style="margin-top:5px;"><div class="inlineTools"><label>CHIR dátum</label><input data-k="p${i}_iv_chir_date" type="date" /><button class="mini" onclick="setDate('p${i}_iv_chir_date','today')">Dnes</button></div><div></div></div>
-          
           <div id="iv_cvk_box_${i}" class="hidden row" style="margin-top:5px;"><div class="inlineTools"><label>CVK dátum</label><input data-k="p${i}_iv_cvk_date" type="date" /><button class="mini" onclick="setDate('p${i}_iv_cvk_date','today')">Dnes</button></div><div></div></div>
-          
           <div id="iv_hd_box_${i}" class="hidden row" style="margin-top:5px;"><div class="inlineTools"><label>HD dátum</label><input data-k="p${i}_iv_hd_date" type="date" /><button class="mini" onclick="setDate('p${i}_iv_hd_date','today')">Dnes</button></div><div></div></div>
           
-          <div id="iv_hrd_box_${i}" class="hidden" style="margin-top:5px; background:#f8fafc; padding:4px;">
-             <div class="row" style="margin:0;">
-                <div><label>Drén dátum</label><input data-k="p${i}_iv_hrd_date" type="date" /></div>
-                <div><label>Výdaj ml/h</label><input data-k="p${i}_iv_hrd_out" type="text" /></div>
-             </div>
+          <div id="iv_hrd_box_${i}" class="hidden custom-box">
+             <div class="row" style="margin:0;"><div><label>Drén dátum</label><input data-k="p${i}_iv_hrd_date" type="date" /></div><div><label>Výdaj ml/h</label><input data-k="p${i}_iv_hrd_out" type="text" /></div></div>
           </div>
           
           <div id="pk_box_${i}" class="hidden row" style="margin-top:5px;"><div class="inlineTools"><label>PK dátum</label><input data-k="p${i}_pk_date" type="date" /><button class="mini" onclick="setDate('p${i}_pk_date','today')">Dnes</button></div><div></div></div>
-          
           <div id="peg_box_${i}" class="hidden row" style="margin-top:5px;"><div class="inlineTools"><label>PEG dátum</label><input data-k="p${i}_peg_date" type="date" /><button class="mini" onclick="setDate('p${i}_peg_date','today')">Dnes</button></div><div></div></div>
           
-          <div id="ngs_box_${i}" class="hidden" style="margin-top:5px; background:#f8fafc; padding:4px;">
-             <div class="row" style="margin:0;">
-                <div><label>NGS dátum</label><input data-k="p${i}_ngs_date" type="date" /></div>
-                <div><label>Výdaj ml/h</label><input data-k="p${i}_ngs_out" type="text" /></div>
-             </div>
+          <div id="ngs_box_${i}" class="hidden custom-box">
+             <div class="row" style="margin:0;"><div><label>NGS dátum</label><input data-k="p${i}_ngs_date" type="date" /></div><div><label>Výdaj ml/h</label><input data-k="p${i}_ngs_out" type="text" /></div></div>
+          </div>
+          
+          <div id="nefro_box_${i}" class="hidden custom-box">
+             <div class="row" style="margin:0;"><div><label>Nefro dátum</label><input data-k="p${i}_nefro_date" type="date" /></div><div><label>Výdaj</label><input data-k="p${i}_nefro_out" type="text" /></div></div>
+          </div>
+          
+          <div id="custom_in_box_${i}" class="hidden custom-box">
+              <label>Názov vstupu</label><input data-k="p${i}_custom_in_name" type="text" />
+              <div class="row" style="margin-top:5px; margin-bottom:0;">
+                  <div><label>Dátum</label><input data-k="p${i}_custom_in_date" type="date" /></div>
+                  <div><label>Poznámka</label><input data-k="p${i}_custom_in_note" type="text" /></div>
+              </div>
           </div>
 
           <div style="margin-top:10px; border-top:1px dashed var(--border); padding-top:5px;">
@@ -1099,10 +1104,15 @@
     save();
   }
   function syncPatient(i){
-    // MM Sync (Visibility toggle via JS, keeps space clean)
+    // MM Sync
     const mmOn = !!getVal(`p${i}_mm_on`);
     document.getElementById(`mm_box_${i}`)?.classList.toggle("hidden", !mmOn);
     if(!mmOn) setVal(`p${i}_mm_value`, "");
+
+    // Colo Sync (ADDED)
+    const koloOn = !!getVal(`p${i}_kolo_on`);
+    document.getElementById(`kolo_box_${i}`)?.classList.toggle("hidden", !koloOn);
+    if(!koloOn){ setVal(`p${i}_kolo_date`,""); setVal(`p${i}_kolo_freq`,""); }
 
     // KS Sync
     const ksType = getVal(`p${i}_ks_type`);
@@ -1128,6 +1138,10 @@
     const pkOn  = !!getVal(`p${i}_pk_on`);
     const pegOn = !!getVal(`p${i}_peg_on`);
     const ngsOn = !!getVal(`p${i}_ngs_on`);
+    // ADDED: Nefro & Custom
+    const nefroOn = !!getVal(`p${i}_nefro_on`);
+    const customInOn = !!getVal(`p${i}_custom_in_on`);
+
     document.getElementById(`iv_chir_box_${i}`)?.classList.toggle("hidden", !chirOn);
     document.getElementById(`iv_cvk_box_${i}`)?.classList.toggle("hidden", !cvkOn);
     document.getElementById(`iv_hd_box_${i}`)?.classList.toggle("hidden", !hdOn);
@@ -1135,6 +1149,9 @@
     document.getElementById(`pk_box_${i}`)?.classList.toggle("hidden", !pkOn);
     document.getElementById(`peg_box_${i}`)?.classList.toggle("hidden", !pegOn);
     document.getElementById(`ngs_box_${i}`)?.classList.toggle("hidden", !ngsOn);
+    document.getElementById(`nefro_box_${i}`)?.classList.toggle("hidden", !nefroOn);
+    document.getElementById(`custom_in_box_${i}`)?.classList.toggle("hidden", !customInOn);
+
     if(!chirOn) setVal(`p${i}_iv_chir_date`, "");
     if(!cvkOn) setVal(`p${i}_iv_cvk_date`, "");
     if(!hdOn){ setVal(`p${i}_iv_hd_date`, ""); }
@@ -1142,6 +1159,8 @@
     if(!pkOn) setVal(`p${i}_pk_date`, "");
     if(!pegOn) setVal(`p${i}_peg_date`, "");
     if(!ngsOn){ setVal(`p${i}_ngs_date`, ""); setVal(`p${i}_ngs_out`, ""); }
+    if(!nefroOn){ setVal(`p${i}_nefro_date`, ""); setVal(`p${i}_nefro_out`, ""); }
+    if(!customInOn){ setVal(`p${i}_custom_in_name`, ""); setVal(`p${i}_custom_in_date`, ""); setVal(`p${i}_custom_in_note`, ""); }
 
     // Inzulin sync
     const inzOn = !!getVal(`p${i}_inz_on`);
@@ -1411,14 +1430,12 @@
     }).filter(Boolean).join(", ");
   }
 
-  // --- BLOOD (FIXED PRINT) ---
+  // --- BLOOD ---
   function syncBloodVisibility(i){
-    // This just updates CSS based on hidden checkbox state
     for(let s=1; s<=4; s++){
       const isOn = !!getVal(`p${i}_blood${s}_on`);
       const wrap = document.getElementById(`blood_wrap_${i}_${s}`);
        
-      // Update visual summary of what was given today
       const accum = parseInt(getVal(`p${i}_blood${s}_today_accumulator`)||0);
       const summEl = document.getElementById(`blood_summary_${i}_${s}`);
       if(summEl) summEl.textContent = accum > 0 ? `(Dnes podané: ${accum})` : "";
@@ -1431,10 +1448,8 @@
   }
 
   function activateNextBloodSlot(i){
-    // Find first disabled checkbox and enable it
     for(let s=1; s<=4; s++){
       if(!getVal(`p${i}_blood${s}_on`)){
-        // SAFETY: Force clear the new slot
         setVal(`p${i}_blood${s}_type`, "");
         setVal(`p${i}_blood${s}_ready`, "");
         setVal(`p${i}_blood${s}_secured`, "");
@@ -1442,8 +1457,6 @@
         setVal(`p${i}_blood${s}_date`, "");
         setVal(`p${i}_blood${s}_time`, "");
         setVal(`p${i}_blood${s}_today_accumulator`, 0);
-         
-        // Now turn it on
         setVal(`p${i}_blood${s}_on`, 1);
         save();
         return;
@@ -1453,8 +1466,7 @@
   }
 
   function removeBloodSlot(i, s){
-    setVal(`p${i}_blood${s}_on`, 0); // Uncheck hidden box
-    // Clear values
+    setVal(`p${i}_blood${s}_on`, 0); 
     setVal(`p${i}_blood${s}_type`, "");
     setVal(`p${i}_blood${s}_ready`, "");
     setVal(`p${i}_blood${s}_secured`, "");
@@ -1479,19 +1491,16 @@
     let currentAccum = parseInt(getVal(accumKey) || "0", 10) || 0;
 
     if(given <= 0) return;
-     
-    // Logic: subtract from ready, add to today's accumulator
-    // If ready is 0, we still allow logging "given" but ready stays 0
     let newReady = Math.max(0, ready - given);
      
     setVal(readyKey, String(newReady));
     setVal(accumKey, String(currentAccum + given));
-    setVal(givenKey, ""); // clear given field after applying
+    setVal(givenKey, "");
     save();
-    syncBloodVisibility(i); // Update UI text
+    syncBloodVisibility(i);
   }
 
-  // --- Printing (FIXED DATE LOGIC) ---
+  // --- Printing (NO DUPLICATES LOGIC) ---
   function addComma(parts, piece){ const t = cleanSpaces(piece); if(t) parts.push(t); }
 
   function makeDayTextFromDate(startISO){
@@ -1499,211 +1508,30 @@
     const start = new Date(startISO + "T00:00:00");
     if(isNaN(start.getTime())) return "";
     
-    // Získame dátum z hlavičky (input id="handoverDay")
     const headerDateVal = document.getElementById("handoverDay").value;
     let end;
-    
     if(headerDateVal) {
       end = new Date(headerDateVal + "T00:00:00");
     } else {
-      // Fallback ak by bol dátum hlavičky prázdny (poistka)
       const n = new Date();
       end = new Date(n.getFullYear(), n.getMonth(), n.getDate());
     }
-
-    // Výpočet rozdielu
     const diffTime = end - start;
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    // +1 lebo ak je dátum rovnaký, je to 1. deň
     const dayCount = diffDays + 1;
 
     return (dayCount < 1) ? "" : `${dayCount}. deň`;
   }
   
-  // NEW HELPER: Get reference date from header
   function getPrintRefDate() {
     return document.getElementById("handoverDay").value || todayISO();
   }
 
-  // --- UPDATED PRINTING FUNCTIONS (FIXED) ---
-
-  function examPrintStr(label, dateISO, timeStr){
-    const lab = cleanSpaces(label);
-    const d = cleanSpaces(dateISO);
-    const t = formatTimeSK(timeStr);
-    if(!lab) return null;
-    
-    let txt = lab;
-    if(t) txt += ` ${t}`;
-     
-    const ref = getPrintRefDate();
-    
-    // Compare with reference date instead of system time
-    if(d && d === ref) return { text: txt, day: "today" };
-    if(d && d === isoAddDays(ref, 1)) return { text: txt, day: "tomorrow" };
-    
-    return { text: txt, day: "other" }; 
-  }
-
-  function levelPrint(name, dateISO, timeStr, obe){
-    const n = cleanSpaces(name);
-    if(!n) return "";
-    const typ = obe ? "obe" : "reziduálna";
-    const d = cleanSpaces(dateISO);
-    const t = formatTimeSK(timeStr);
-    
-    const ref = getPrintRefDate();
-
-    if(d && d === ref) {
-        return `dnes mal: hladina ${n} ${typ}`; 
-    }
-    if(d && d === isoAddDays(ref, 1)){
-      if(t) return `zajtra ${t} hladina ${n} ${typ}`;
-      return `zajtra: hladina ${n} ${typ}`;
-    }
-    return `hladina ${n} ${typ}`;
-  }
-
-  function labsPrint(i){
-    const note = cleanSpaces(getVal(`p${i}_lab_note`));
-    const d = cleanSpaces(getVal(`p${i}_lab_date`));
-    const t = formatTimeSK(getVal(`p${i}_lab_time`));
-    const ref = getPrintRefDate();
-
-    // Checkboxes (Done/Today)
-    const sel = [];
-    if(getVal(`p${i}_lab_odbery`)) sel.push("odbery");
-    if(getVal(`p${i}_lab_vytery`)) sel.push("výtery");
-    if(getVal(`p${i}_lab_moc`)) sel.push("moč K+C");
-    if(getVal(`p${i}_lab_antigeny`)) sel.push("antigény");
-     
-    let part1 = "";
-    if(sel.length > 0 || note){
-       let base = sel.join(", ");
-       if(note) base = base ? `${base} ${note}` : note;
-       
-       if(d && d === ref) part1 = `dnes ${base}`;
-       else if(d && d === isoAddDays(ref, 1)) part1 = `zajtra ${t} ${base}`; 
-       else part1 = base; 
-    }
-
-    // Plan (Tomorrow/Other)
-    const planText = cleanSpaces(getVal(`p${i}_lab_plan`));
-    const planDate = cleanSpaces(getVal(`p${i}_lab_plan_date`));
-    let part2 = "";
-    
-    if(planText){
-      if(planDate && planDate === isoAddDays(ref, 1)) part2 = `zajtra ${planText}`;
-      else if(planDate && planDate === ref) part2 = `dnes plán: ${planText}`;
-      else part2 = planText; 
-    }
-
-    if(part1 && part2) return `${part1}, ${part2}`;
-    return part1 || part2;
-  }
-   
-  function hkPrint(i){
-    const d = cleanSpaces(getVal(`p${i}_hk_date`));
-    const t = formatTimeSK(getVal(`p${i}_hk_time`));
-    const st = ensureState();
-    const list = st.hk[getHKKey(i)] || [];
-     
-    // Realtime check for "already done today"
-    const todayPrefix = todayISO(); 
-    const todayCount = list.filter(x => x.ts.startsWith(todayPrefix)).length;
-    const totalCount = list.length;
-     
-    const obe = !!getVal(`p${i}_hk_obe`) ? " obe" : "";
-    const ref = getPrintRefDate();
-
-    // 1. DONE
-    if(todayCount > 0){
-       return `dnes odobratá ${todayCount}x HK${obe} (${totalCount}x)`;
-    }
-
-    // 2. PLANNED
-    if(d && d === isoAddDays(ref, 1)){
-       let s = "zajtra";
-       if(t) s += ` ${t}`;
-       s += ` odobrať HK${obe}`;
-       return s;
-    }
-
-    if(d && d === ref){
-       let s = "dnes";
-       if(t) s += ` ${t}`;
-       s += ` odobrať HK${obe}`; 
-       return s;
-    }
-     
-    return "";
-  }
-   
-  function bloodPrintMulti(i){
-    const lines = [];
-    const ref = getPrintRefDate();
-
-    for(let s=1;s<=4;s++){
-      if(!getVal(`p${i}_blood${s}_on`)) continue;
-      const type = cleanSpaces(getVal(`p${i}_blood${s}_type`));
-      if(!type) continue;
-       
-      const ready = parseInt(getVal(`p${i}_blood${s}_ready`)||"0",10)||0;
-      const secured = parseInt(getVal(`p${i}_blood${s}_secured`)||"0",10)||0;
-      const todayGiven = parseInt(getVal(`p${i}_blood${s}_today_accumulator`)||"0",10)||0;
-      const d = cleanSpaces(getVal(`p${i}_blood${s}_date`));
-      const t = formatTimeSK(getVal(`p${i}_blood${s}_time`));
-
-      const parts = [];
-      
-      // 1. DNES PODANÉ
-      if(todayGiven > 0){
-         parts.push(`dnes podaná ${todayGiven} ${type}`);
-      }
-
-      // 2. STOCK
-      let stockParts = [];
-      if(ready > 0) stockParts.push(`${ready} pripravené`);
-      if(secured > 0) stockParts.push(`${secured} zaistené`);
-      
-      if(stockParts.length > 0){
-          parts.push(`${type} ${stockParts.join(", ")}`);
-      }
-
-      // 3. PLAN (FIXED)
-      if(d){
-        let p = "";
-        let isPlan = false;
-
-        if(d === ref) {
-             p = "dnes"; // Matches header date -> Today
-             isPlan = true;
-        } else if (d === isoAddDays(ref, 1)) {
-             p = "zajtra";
-             isPlan = true;
-        }
-
-        if(isPlan){
-            if(t) p += ` ${t}`;
-            p += " podať"; // Plan phrase
-            
-            const planCount = parseInt(getVal(`p${i}_blood${s}_given_count`)||"0",10)||0;
-            if(planCount > 0) p += ` ${planCount}`;
-            p += ` ${type}`;
-            parts.push(p);
-        }
-      }
-      
-      if(parts.length > 0) lines.push(parts.join("; "));
-    }
-    return lines.join(" | ");
-  }
-
+  // --- REPLACED: NEW BUCKETING PRINT LOGIC ---
   function buildPrintRowsSorted(){
     const items = [];
-    const ref = getPrintRefDate(); // Load Ref
-    // CHECK SHIFT TYPE for Logic
+    const ref = getPrintRefDate();
+    const tomorr = isoAddDays(ref, 1);
     const shiftType = document.getElementById("shiftType").value;
 
     for(let i=1;i<=5;i++){
@@ -1727,7 +1555,6 @@
       const fullname = cleanSpaces((getVal(`p${i}_surname`) + " " + getVal(`p${i}_name`)).trim()) || "-";
       const allergy = cleanSpaces(getVal(`p${i}_allergy`));
        
-      // ISOLATION
       const isoOn = !!getVal(`p${i}_iso_on`);
       const isoReason = cleanSpaces(getVal(`p${i}_iso_reason`));
       const isolationHTML = isoOn ? `<div style="color:red; font-weight:bold; font-size:11px; margin-top:2px;">IZOLÁCIA: ${isoReason||"Áno"}</div>` : "";
@@ -1753,14 +1580,18 @@
       }
       if(getVal(`p${i}_iv_chir_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_iv_chir_date`)); addComma(parts, d ? `CHIR ${d}`:"CHIR"); }
       if(getVal(`p${i}_iv_cvk_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_iv_cvk_date`)); addComma(parts, d ? `CVK ${d}`:"CVK"); }
-      if(getVal(`p${i}_iv_hd_on`)){ 
-          const d=makeDayTextFromDate(getVal(`p${i}_iv_hd_date`)); 
-          addComma(parts, `HD kaval ${d||""}`.trim());
-      }
+      if(getVal(`p${i}_iv_hd_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_iv_hd_date`)); addComma(parts, `HD kaval ${d||""}`.trim()); }
       if(getVal(`p${i}_pk_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_pk_date`)); addComma(parts, d ? `PK ${d}`:"PK"); }
       if(getVal(`p${i}_pv_check`)) addComma(parts, "P+V");
       if(getVal(`p${i}_mm_on`)) addComma(parts, `MM: ${getVal(`p${i}_mm_value`)}`);
       
+      const stolica = getVal(`p${i}_stolica`); if(stolica) addComma(parts, `stolica ${stolica}`);
+      if(getVal(`p${i}_kolo_on`)){
+          const d = makeDayTextFromDate(getVal(`p${i}_kolo_date`));
+          const f = getVal(`p${i}_kolo_freq`);
+          addComma(parts, `kolostómia ${d} ${f}`.trim());
+      }
+
       // -- OXYGEN --
       if(getVal(`p${i}_oxy_on`)){
         const mode = getVal(`p${i}_oxy_mode`);
@@ -1774,15 +1605,14 @@
       }
 
       if(getVal(`p${i}_peg_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_peg_date`)); addComma(parts, d ? `PEG ${d}`:"PEG"); }
-      if(getVal(`p${i}_ngs_on`)){ 
-          const d=makeDayTextFromDate(getVal(`p${i}_ngs_date`)); 
-          const out=cleanSpaces(getVal(`p${i}_ngs_out`));
-          addComma(parts, `NGS ${d||""} ${out||""}`.trim());
-      }
-      if(getVal(`p${i}_iv_hrd_on`)){
-        const d=makeDayTextFromDate(getVal(`p${i}_iv_hrd_date`));
-        const out=cleanSpaces(getVal(`p${i}_iv_hrd_out`));
-        addComma(parts, `Hr drén ${d||""} ${out||""}`.trim());
+      if(getVal(`p${i}_ngs_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_ngs_date`)); const out=cleanSpaces(getVal(`p${i}_ngs_out`)); addComma(parts, `NGS ${d||""} ${out||""}`.trim()); }
+      if(getVal(`p${i}_iv_hrd_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_iv_hrd_date`)); const out=cleanSpaces(getVal(`p${i}_iv_hrd_out`)); addComma(parts, `Hr drén ${d||""} ${out||""}`.trim()); }
+      if(getVal(`p${i}_nefro_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_nefro_date`)); const out=cleanSpaces(getVal(`p${i}_nefro_out`)); addComma(parts, `nefrostómia ${d||""} ${out||""}`.trim()); }
+      if(getVal(`p${i}_custom_in_on`)){
+          const name = getVal(`p${i}_custom_in_name`)||'Iný vstup';
+          const d = makeDayTextFromDate(getVal(`p${i}_custom_in_date`));
+          const note = getVal(`p${i}_custom_in_note`);
+          addComma(parts, `${name} ${d||""} ${note||""}`.trim());
       }
 
       // 3. LIEČBA
@@ -1793,18 +1623,60 @@
       addComma(parts, contPrint(i));
 
       // 4. HLADINY
-      addComma(parts, levelPrint(getVal(`p${i}_lvl_name`), getVal(`p${i}_lvl_date`), getVal(`p${i}_lvl_time`), !!getVal(`p${i}_lvl_obe`)));
+      const lvl = getVal(`p${i}_lvl_name`);
+      if(lvl){
+         const d = getVal(`p${i}_lvl_date`);
+         const t = formatTimeSK(getVal(`p${i}_lvl_time`));
+         const typ = getVal(`p${i}_lvl_obe`) ? "obe" : "reziduálna";
+         let txt = `hladina ${lvl} ${typ}`;
+         if(d === ref) txt = `dnes mal ${txt}`;
+         else if(d === tomorr) txt = `zajtra ${t} ${txt}`;
+         addComma(parts, txt);
+      }
 
       // 5. DIETA / METABOLIZMUS
       const gp = cleanSpaces(getVal(`p${i}_gp_type`));
       if(gp) addComma(parts, gp);
       if(getVal(`p${i}_inz_on`)){
         const loc = cleanSpaces(getVal(`p${i}_inz_loc`));
-        if(loc && loc !== "") addComma(parts, `Inz. dľa glykémie - perá ${loc}`);
-        else addComma(parts, `Inz. dľa glykémie`);
+        addComma(parts, loc ? `Inz. dľa glykémie - perá ${loc}` : `Inz. dľa glykémie`);
       }
 
       // 6. KRVNE PRIPRAVKY
+      function bloodPrintMulti(i){
+        const lines = [];
+        for(let s=1;s<=4;s++){
+          if(!getVal(`p${i}_blood${s}_on`)) continue;
+          const type = cleanSpaces(getVal(`p${i}_blood${s}_type`)); if(!type) continue;
+          const ready = parseInt(getVal(`p${i}_blood${s}_ready`)||"0",10)||0;
+          const secured = parseInt(getVal(`p${i}_blood${s}_secured`)||"0",10)||0;
+          const todayGiven = parseInt(getVal(`p${i}_blood${s}_today_accumulator`)||"0",10)||0;
+          const d = cleanSpaces(getVal(`p${i}_blood${s}_date`));
+          const t = formatTimeSK(getVal(`p${i}_blood${s}_time`));
+
+          const parts = [];
+          if(todayGiven > 0) parts.push(`dnes podaná ${todayGiven} ${type}`);
+          let stockParts = [];
+          if(ready > 0) stockParts.push(`${ready} pripravené`);
+          if(secured > 0) stockParts.push(`${secured} zaistené`);
+          if(stockParts.length > 0) parts.push(`${type} ${stockParts.join(", ")}`);
+
+          if(d){
+             let p = ""; let isPlan = false;
+             if(d === ref) { p = "dnes"; isPlan = true; } 
+             else if (d === tomorr) { p = "zajtra"; isPlan = true; }
+             if(isPlan){
+                 if(t) p += ` ${t}`; p += " podať";
+                 const planCount = parseInt(getVal(`p${i}_blood${s}_given_count`)||"0",10)||0;
+                 if(planCount > 0) p += ` ${planCount}`;
+                 p += ` ${type}`;
+                 parts.push(p);
+             }
+          }
+          if(parts.length > 0) lines.push(parts.join("; "));
+        }
+        return lines.join(" | ");
+      }
       addComma(parts, bloodPrintMulti(i));
 
       // 7. OŠETROVATEĽSTVO
@@ -1812,38 +1684,89 @@
       if(getVal(`p${i}_os_rany`)) nur.push("ošetrovanie rán");
       if(getVal(`p${i}_os_dekub`)) nur.push("ošetrovanie dekubitov");
       if(getVal(`p${i}_os_poloh`)) nur.push("polohovanie");
-      if(getVal(`p${i}_os_matrac`)){
-          const typ = getVal(`p${i}_os_matrac_typ`);
-          nur.push(`antidekubitný matrac (${typ})`);
-      }
+      if(getVal(`p${i}_os_matrac`)) nur.push(`antidekubitný matrac (${getVal(`p${i}_os_matrac_typ`)})`);
       if(nur.length) addComma(parts, nur.join(", "));
-       
-      // 8. SLEDOVAŤ
       if(getVal(`p${i}_watch`)) addComma(parts, `sledovať ${getVal(`p${i}_watch`)}`);
 
-      // 9. VYŠETRENIA
-      addComma(parts, labsPrint(i));
-      addComma(parts, hkPrint(i));
+      // === 8. BUCKETING LOGIC (The "No Duplicates" Core) ===
+      let todayBucket = [];
+      let tomorrBucket = [];
+      let otherBucket = {}; 
 
-      let todayExams = [];
-      let tomExams = [];
-      for(let n=1;n<=3;n++){
-        const ex = examPrintStr(getVal(`p${i}_exam${n}_text`), getVal(`p${i}_exam${n}_date`), getVal(`p${i}_exam${n}_time`));
-        if(ex){
-           if(ex.day === "today") todayExams.push(ex.text);
-           else if(ex.day === "tomorrow") tomExams.push(ex.text);
-           else addComma(parts, ex.text); 
-        }
+      // A) Labs DONE
+      const lDate = getVal(`p${i}_lab_date`);
+      const lNote = cleanSpaces(getVal(`p${i}_lab_note`));
+      let lItems = [];
+      if(getVal(`p${i}_lab_odbery`)) lItems.push("odbery");
+      if(getVal(`p${i}_lab_vytery`)) lItems.push("výtery");
+      if(getVal(`p${i}_lab_moc`)) lItems.push("moč K+C");
+      if(getVal(`p${i}_lab_antigeny`)) lItems.push("antigény");
+      if(lNote) lItems.push(lNote);
+
+      if(lItems.length > 0) {
+           let txt = lItems.join(", ");
+           if(lDate === ref || !lDate) todayBucket.push(txt);
+           else if(lDate === tomorr) tomorrBucket.push(txt);
+           else { if(!otherBucket[lDate]) otherBucket[lDate]=[]; otherBucket[lDate].push(`mal ${txt}`); }
       }
-      // LOGIC: Check shift type for correct prefix
-      if(todayExams.length > 0) {
-          if(shiftType === "celodenna") {
-              addComma(parts, "dnes mal " + todayExams.join(", "));
-          } else {
-              addComma(parts, "dnes " + todayExams.join(", "));
-          }
+
+      // B) Exams (Unified)
+      for(let n=1; n<=3; n++){
+           const ed = getVal(`p${i}_exam${n}_date`);
+           const et = cleanSpaces(getVal(`p${i}_exam${n}_text`));
+           const em = formatTimeSK(getVal(`p${i}_exam${n}_time`));
+           if(et) {
+               let str = et; if(em) str = `${str} ${em}`; // e.g. ECHO 14:00
+               if(ed === ref) todayBucket.push(str);
+               else if(ed === tomorr) tomorrBucket.push(str);
+               else if(ed) { if(!otherBucket[ed]) otherBucket[ed]=[]; otherBucket[ed].push(str); }
+               else todayBucket.push(str); // No date = today assumption
+           }
       }
-      if(tomExams.length > 0) addComma(parts, "zajtra " + tomExams.join(", "));
+
+      // C) Lab PLAN
+      const pd = getVal(`p${i}_lab_plan_date`);
+      let pTxt = cleanSpaces(getVal(`p${i}_lab_plan`));
+      if(pd || pTxt) {
+           if(!pTxt) pTxt = "plán odbery"; // Default text if empty but date exists
+           else pTxt = "plán: " + pTxt;
+           
+           if(pd === tomorr || (!pd && pTxt)) tomorrBucket.push(pTxt);
+           else if(pd === ref) todayBucket.push(pTxt);
+           else if(pd) { if(!otherBucket[pd]) otherBucket[pd]=[]; otherBucket[pd].push(pTxt); }
+      }
+
+      // D) Hemokultúry
+      const hkDate = getVal(`p${i}_hk_date`);
+      const hkTime = formatTimeSK(getVal(`p${i}_hk_time`));
+      const hkObe = !!getVal(`p${i}_hk_obe`) ? " obe" : "";
+      
+      // Check already done today
+      const st = ensureState();
+      const hkList = st.hk[`p${i}`] || [];
+      const todayCount = hkList.filter(x => x.ts.startsWith(todayISO())).length;
+      if(todayCount > 0) todayBucket.push(`odobratá ${todayCount}x HK${hkObe}`);
+      
+      // Future Plan
+      if(hkDate){
+         let txt = `odobrať HK${hkObe}`;
+         if(hkTime) txt += ` ${hkTime}`;
+         if(hkDate === ref) todayBucket.push(txt);
+         else if(hkDate === tomorr) tomorrBucket.push(txt);
+      }
+
+      // --- ASSEMBLE BUCKETS ---
+      if(todayBucket.length) {
+          if(shiftType === "celodenna") addComma(parts, "dnes mal " + todayBucket.join(", "));
+          else addComma(parts, "dnes " + todayBucket.join(", "));
+      }
+      
+      if(tomorrBucket.length) addComma(parts, "zajtra " + tomorrBucket.join(", "));
+      
+      Object.keys(otherBucket).sort().forEach(iso => {
+          addComma(parts, `${formatDateSK(iso)} ${otherBucket[iso].join(", ")}`);
+      });
+
 
       // 10. TRANSPORT / PREKLAD
       const transType = cleanSpaces(getVal(`p${i}_transport_type`));
@@ -1866,7 +1789,7 @@
 
           let phrase = "";
           if(transDate){
-             if(transDate === isoAddDays(ref, 1)) phrase += "zajtra";
+             if(transDate === tomorr) phrase += "zajtra";
              else if(transDate === ref) phrase += "dnes";
              else phrase += formatDateSK(transDate);
           }
@@ -1894,7 +1817,6 @@
 
   function buildLeftRowsForPrint(){
     const st = ensureState();
-    // Include EXITUS in print
     const sorted = (st.left||[]).filter(x=>x.end?.discharged || x.end?.transferred || x.end?.exitus);
     return sorted.map(x=>{
       const bed = x.bed || "-";
@@ -1961,7 +1883,7 @@
   function exportJSON(){
     save(true);
     const blob = new Blob([localStorage.getItem(STORAGE_KEY)||"{}"], {type:"application/json"});
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "Hlasenie_v136_O2.json";
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "Hlasenie_v150_Hybrid.json";
     document.body.appendChild(a); a.click(); a.remove();
   }
 
