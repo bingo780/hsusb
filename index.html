@@ -1,1906 +1,446 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Koronárna JIS – Hlásenie v1.50 (Hybrid Logic)</title>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Skener expirácie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <style>
-  /* --- THEME VARIABLES --- */
-  :root {
-    --bg: #f0f4f8;           
-    --card: #ffffff;         
-    --text: #1e293b;         
-    --muted: #64748b;        
-    --border: #cbd5e1;       
-    --primary: #0284c7;      
-    --primary-light: #e0f2fe;
-    --danger: #dc2626;       
-    --danger-bg: #fef2f2;
-    --ok: #16a34a;           
-    --warn: #d97706;         
-    --radius: 8px;           
-    --shadow: 0 2px 5px rgba(0,0,0,0.08); 
-    --input-bg: #f8fafc;
+  :root{
+    --paper:#F6F1E7;--ink:#1C2421;--ink-soft:#5A6460;--line:#E4DCCB;--surface:#fff;
+    --green:#0E5B4F;--green-deep:#0A4339;--green-tint:#E5F0EB;
+    --red:#C0392B;--amber:#C77A14;--gold:#B58A0E;--ok:#2E7D5B;
+    --sat:env(safe-area-inset-top);--sab:env(safe-area-inset-bottom);
   }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{font-family:'DM Sans',-apple-system,sans-serif;background:#0A0E0C;color:var(--ink);
+    overflow:hidden;-webkit-text-size-adjust:100%;}
+  .screen{position:fixed;inset:0;display:none;flex-direction:column;}
+  .screen.active{display:flex;}
 
-  * { box-sizing: border-box; }
+  /* START */
+  #start{background:linear-gradient(165deg,var(--green) 0%,var(--green-deep) 100%);color:#F3EFE4;
+    padding:calc(var(--sat) + 40px) 28px calc(var(--sab) + 28px);justify-content:space-between;}
+  .logo{width:62px;height:62px;border-radius:18px;background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.22);display:grid;place-items:center;}
+  .logo svg{width:34px;height:34px;}
+  #start h1{font-family:'Fraunces',serif;font-weight:600;font-size:34px;line-height:1.05;margin:22px 0 12px;}
+  #start p{font-size:15.5px;line-height:1.55;opacity:.86;max-width:30ch;}
+  .hint-list{margin-top:22px;display:flex;flex-direction:column;gap:12px;}
+  .hint{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;opacity:.82;line-height:1.4;}
+  .hint svg{width:18px;height:18px;flex:none;margin-top:1px;opacity:.9;}
+  .start-btn{background:#F3EFE4;color:var(--green-deep);border:0;border-radius:16px;padding:18px;
+    font:inherit;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;gap:10px;box-shadow:0 12px 30px rgba(0,0,0,.25);width:100%;}
+  .start-btn:active{transform:scale(.98);}
+  .start-btn svg{width:22px;height:22px;}
 
-  body {
-    margin: 0;
-    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    padding-bottom: 60px; 
-    font-size: 14px;
-  }
+  /* CAMERA */
+  #cam{background:#000;}
+  #video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .cam-top{position:absolute;top:0;left:0;right:0;z-index:5;padding:calc(var(--sat) + 14px) 18px 14px;
+    background:linear-gradient(180deg,rgba(0,0,0,.6),transparent);display:flex;align-items:center;justify-content:space-between;}
+  .cam-title{color:#fff;font-family:'Fraunces',serif;font-weight:600;font-size:18px;display:flex;align-items:center;gap:8px;}
+  .icon-btn{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.16);border:0;color:#fff;
+    display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(6px);}
+  .icon-btn svg{width:21px;height:21px;}
+  .icon-btn.on{background:#F3D27A;color:#3a2c00;}
 
-  /* --- HEADER & NAVIGATION --- */
-  header {
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    padding: 10px 15px;
-  }
+  .reticle{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:78%;height:21%;z-index:4;border-radius:14px;
+    box-shadow:0 0 0 100vmax rgba(0,0,0,.5);border:2px solid rgba(255,255,255,.85);}
+  .reticle::before,.reticle::after{content:"";position:absolute;left:-2px;right:-2px;height:2px;}
+  .scanline{position:absolute;left:6px;right:6px;height:2px;background:#7CE0C0;border-radius:2px;
+    box-shadow:0 0 8px #7CE0C0;animation:scan 2s ease-in-out infinite;}
+  @keyframes scan{0%,100%{top:8%;}50%{top:88%;}}
+  .reticle-label{position:absolute;top:-30px;left:0;right:0;text-align:center;color:#fff;
+    font-size:13px;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.8);}
 
-  .wrap {
-    max-width: 1900px;
-    margin: 0 auto;
-  }
+  /* result panel */
+  .panel{position:absolute;left:0;right:0;bottom:0;z-index:6;padding:22px 20px calc(var(--sab) + 22px);
+    background:linear-gradient(0deg,rgba(0,0,0,.82) 60%,transparent);transition:.25s;}
+  .status-card{border-radius:20px;padding:20px;text-align:center;transform:translateY(8px);opacity:.4;
+    transition:.3s;border:2px solid transparent;}
+  .status-card.live{transform:none;opacity:1;}
+  .status-card.searching{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.18);}
+  .status-card.expired{background:#2a1310;border-color:var(--red);}
+  .status-card.critical{background:#2a1d0c;border-color:var(--amber);}
+  .status-card.soon{background:#272208;border-color:var(--gold);}
+  .status-card.ok{background:#0f231a;border-color:var(--ok);}
+  .sc-dot{width:16px;height:16px;border-radius:50%;margin:0 auto 10px;}
+  .expired .sc-dot{background:var(--red);box-shadow:0 0 16px var(--red);}
+  .critical .sc-dot{background:var(--amber);box-shadow:0 0 16px var(--amber);}
+  .soon .sc-dot{background:var(--gold);box-shadow:0 0 16px var(--gold);}
+  .ok .sc-dot{background:var(--ok);box-shadow:0 0 16px var(--ok);}
+  .sc-label{font-family:'Fraunces',serif;font-weight:600;font-size:26px;line-height:1.05;color:#fff;}
+  .expired .sc-label{color:#FF8A7A;}.critical .sc-label{color:#FFC074;}.soon .sc-label{color:#F2D560;}.ok .sc-label{color:#7CE0B0;}
+  .sc-sub{color:rgba(255,255,255,.85);font-size:15px;margin-top:6px;font-weight:500;}
+  .sc-read{color:rgba(255,255,255,.5);font-size:12px;margin-top:8px;font-variant-numeric:tabular-nums;}
+  .searching .sc-label{font-size:18px;color:rgba(255,255,255,.92);}
+  .save-row{display:flex;gap:10px;margin-top:14px;}
+  .save-row.hidden{display:none;}
+  .pbtn{flex:1;border:0;border-radius:13px;padding:14px;font:inherit;font-size:15px;font-weight:700;cursor:pointer;}
+  .pbtn.save{background:#F3EFE4;color:var(--green-deep);}
+  .pbtn.again{background:rgba(255,255,255,.16);color:#fff;}
 
-  .top-row-container {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 15px;
-    margin-bottom: 10px;
-  }
+  .prep{position:absolute;inset:0;z-index:7;background:rgba(8,12,10,.92);display:none;
+    flex-direction:column;align-items:center;justify-content:center;color:#fff;padding:30px;text-align:center;}
+  .prep.show{display:flex;}
+  .spinner{width:46px;height:46px;border:4px solid rgba(255,255,255,.2);border-top-color:#7CE0C0;
+    border-radius:50%;animation:spin .8s linear infinite;margin-bottom:18px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .prep b{font-family:'Fraunces',serif;font-size:20px;}
+  .prep span{opacity:.7;font-size:13.5px;margin-top:6px;max-width:26ch;}
 
-  h1 { font-size: 20px; margin: 0; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-  .subtitle { font-size: 12px; color: var(--muted); }
+  /* error */
+  #err{background:var(--paper);color:var(--ink);padding:calc(var(--sat) + 40px) 28px;justify-content:center;align-items:center;text-align:center;}
+  #err .ic{width:70px;height:70px;border-radius:20px;background:#FBE9E6;color:var(--red);display:grid;place-items:center;margin-bottom:20px;}
+  #err .ic svg{width:36px;height:36px;}
+  #err h2{font-family:'Fraunces',serif;font-weight:600;font-size:24px;margin-bottom:10px;}
+  #err p{color:var(--ink-soft);font-size:15px;line-height:1.6;max-width:34ch;}
+  #err ol{text-align:left;margin:18px 0 0;padding-left:20px;color:var(--ink-soft);font-size:14.5px;line-height:1.7;}
+  #err .start-btn{background:var(--green);color:#fff;margin-top:24px;}
 
-  /* --- LINK BAR --- */
-  .link-bar {
-      display: flex;
-      gap: 8px;
-      padding: 4px;
-      background: #e2e8f0;
-      border-radius: 8px;
-      overflow-x: auto;
-  }
-  .link-btn {
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 12px;
-      color: #334155;
-      background: #fff;
-      padding: 6px 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      transition: all 0.2s;
-      display: flex; align-items: center; gap: 5px;
-      white-space: nowrap;
-  }
-  .link-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-  .link-btn.highlight { background: var(--primary); color: #fff; border-color: var(--primary); }
-
-  /* --- NAVIGÁCIA --- */
-  .nav-bar {
-      display: flex;
-      gap: 5px;
-      background: #f1f5f9;
-      padding: 5px;
-      border-radius: 8px;
-  }
-  .nav-btn {
-      width: 40px;
-      height: 40px;
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--text);
-      font-weight: bold;
-      border-radius: 6px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.2s;
-      font-size: 15px;
-  }
-  .nav-btn:hover { background: var(--primary-light); border-color: var(--primary); }
-  .nav-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 0 10px rgba(2,132,199,0.4); }
-  .nav-btn.all-btn { width: auto; padding: 0 15px; }
-
-  /* --- TOOLS ROW --- */
-  .btnrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
-
-  button {
-    border: 1px solid var(--border);
-    background: #fff;
-    color: var(--text);
-    padding: 8px 14px;
-    border-radius: 6px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: inherit;
-    font-weight: 600;
-  }
-  button:hover { background: #f8fafc; border-color: #94a3b8; }
-  
-  button.primary { background: var(--primary); color: white; border-color: var(--primary); }
-  button.primary:hover { background: #0369a1; }
-
-  button.danger { background: #fff; color: var(--danger); border-color: var(--border); }
-  button.danger:hover { background: var(--danger); color: white; border-color: var(--danger); }
-
-  button.mini { padding: 4px 10px; font-size: 11px; border-radius: 4px; }
-
-  button.usb-btn { border: 1px solid var(--warn); color: var(--warn); background: #fff; }
-  button.usb-btn:hover { background: #fffbeb; }
-  
-  button.view-toggle { border: 1px solid var(--text); background: #334155; color: #fff; }
-
-  /* --- STATUS DOTS --- */
-  .file-status {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 11px; padding: 2px 8px; border-radius: 4px;
-    background: #f1f5f9; border: 1px solid var(--border); margin-left: 10px;
-  }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
-  .dot.active { background: var(--ok); }
-  .dot.saving { background: var(--warn); }
-  .dot.error { background: var(--danger); }
-
-  /* --- CARDS & LAYOUT --- */
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    margin-top: 15px;
-    overflow: hidden;
-  }
-
-  .cardhead {
-    background: #f8fafc;
-    padding: 10px 15px;
-    border-bottom: 1px solid var(--border);
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .cardhead b { font-size: 15px; color: var(--primary); }
-
-  .content { padding: 15px; }
-
-  /* --- PATIENT CARD GRID --- */
-  .patientCard { opacity: 1; border: 1px solid var(--border); transition: all 0.2s; }
-  .patient-hidden { display: none !important; }
-
-  /* Default Desktop Grid: 4 columns */
-  .patientCard .content {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr); 
-    gap: 20px; 
-    align-items: start;
-  }
-
-  .patientCard .mini4, 
-  .patientCard .row.top-row { grid-column: 1 / -1; }
-
-  /* --- SUB BLOCKS --- */
-  .subBlock {
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px;
-    margin-bottom: 0;
-    height: 100%; 
-  }
-  .subBlock label:first-child {
-    font-weight: 700;
-    color: var(--primary);
-    border-bottom: 2px solid #f1f5f9;
-    padding-bottom: 6px;
-    margin-bottom: 10px;
-    display: block;
-    text-transform: uppercase;
-    font-size: 12px;
-    letter-spacing: 0.5px;
-  }
-
-  /* --- FORMS (PEN OPTIMIZED) --- */
-  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; font-weight: 500; }
-  
-  input, textarea, select {
-    width: 100%;
-    border: 1px solid var(--border);
-    background: var(--input-bg);
-    color: var(--text);
-    padding: 8px 10px; 
-    border-radius: 6px;
-    font-size: 15px; 
-    font-family: inherit;
-    outline: none;
-    transition: border 0.2s, box-shadow 0.2s;
-    min-height: 38px;
-  }
-  input:focus, textarea:focus, select:focus {
-    border-color: var(--primary);
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(2,132,199,0.1);
-  }
-  textarea { min-height: 50px; resize: vertical; }
-
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-  .mini4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
-
-  .checks {
-    display: flex; gap: 8px; flex-wrap: wrap;
-    padding: 0; border: none;
-  }
-  .checks label {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 13px; color: var(--text);
-    background: #f1f5f9; padding: 6px 10px; border-radius: 6px; cursor: pointer;
-    border: 1px solid transparent;
-  }
-  .checks label:hover { background: #e2e8f0; }
-  .checks input { width: 18px; height: 18px; margin: 0; min-height: auto; }
-
-  /* --- RESPONSIVITY (AUTO) --- */
-  @media (max-width: 1100px) {
-      .patientCard .content { display: flex; flex-direction: column; gap: 15px; }
-      .wrap { padding: 5px; }
-      .cardhead { flex-direction: column; align-items: flex-start; gap: 8px; }
-      .mini4 { grid-template-columns: 1fr 1fr; }
-      .top-row-container { gap: 8px; justify-content: center; }
-      .nav-bar { width: 100%; justify-content: space-between; }
-      .link-bar { width: 100%; overflow-x: auto; justify-content: flex-start; }
-  }
-
-  /* --- MANUAL CLASSES --- */
-  body.force-mobile .patientCard .content { display: flex; flex-direction: column; }
-  body.force-mobile .mini4 { grid-template-columns: 1fr 1fr; }
-  body.force-desktop .patientCard .content { display: grid; grid-template-columns: repeat(4, 1fr); }
-  body.force-desktop .mini4 { grid-template-columns: repeat(4, 1fr); }
-
-  /* --- SPECIAL STYLES --- */
-  .hidden { display: none !important; }
-  .inlineTools { display: flex; gap: 5px; margin-top: 5px; }
-  .badge { padding: 2px 8px; background: #cbd5e1; border-radius: 12px; font-size: 11px; font-weight: bold; color: #0f172a; }
-
-  .aaInput {
-    border-color: #fca5a5 !important;
-    background: #fef2f2 !important;
-    color: #991b1b;
-    font-weight: bold;
-  }
-  
-  .exitus-label { color: var(--danger); font-weight: bold; background: #fee2e2 !important; border-color: #fca5a5 !important; }
-
-  details {
-    border: 1px solid var(--border);
-    padding: 6px 10px;
-    border-radius: 6px;
-    margin-top: 5px;
-    background: #f8fafc;
-  }
-  summary { font-size: 12px; font-weight: 700; cursor: pointer; }
-  
-  .blood-slot-container { display: none; margin-top: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: #fafafa; }
-  .blood-slot-container.active { display: block; animation: fadeIn 0.3s ease; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-  .blood-summary-text { font-size: 12px; color: var(--ok); margin-left: 8px; font-weight: 700; }
-  
-  .oxy-layout { display: flex; gap: 10px; flex-wrap: wrap; }
-  .oxy-layout > div { flex: 1; min-width: 120px; }
-  
-  /* Custom Box Style for extra fields */
-  .custom-box {
-      background: #f1f5f9;
-      border: 1px dashed var(--border);
-      padding: 8px;
-      border-radius: 6px;
-      margin-top: 8px;
-  }
-
+  /* saved list */
+  #list{background:var(--paper);color:var(--ink);}
+  .list-head{padding:calc(var(--sat) + 16px) 18px 14px;background:var(--green);color:#F3EFE4;
+    display:flex;align-items:center;justify-content:space-between;
+    border-bottom-left-radius:20px;border-bottom-right-radius:20px;}
+  .list-head h2{font-family:'Fraunces',serif;font-weight:600;font-size:22px;}
+  .list-body{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch;}
+  .row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);
+    border-radius:14px;padding:13px;margin-bottom:10px;position:relative;overflow:hidden;}
+  .row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;}
+  .row.expired::before{background:var(--red);}.row.critical::before{background:var(--amber);}
+  .row.soon::before{background:var(--gold);}.row.ok::before{background:var(--ok);}
+  .row b{font-size:16px;font-variant-numeric:tabular-nums;}
+  .row .meta{font-size:12.5px;color:var(--ink-soft);margin-top:3px;}
+  .row .badge{margin-left:auto;font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px;}
+  .badge.expired{background:#FBE9E6;color:var(--red);}.badge.critical{background:#FCEFD9;color:var(--amber);}
+  .badge.soon{background:#FBF3D6;color:var(--gold);}.badge.ok{background:#E4F2EA;color:var(--ok);}
+  .del{background:none;border:0;color:var(--ink-soft);font-size:22px;cursor:pointer;padding:0 4px;}
+  .empty{text-align:center;color:var(--ink-soft);padding:60px 20px;font-size:15px;}
+  .toast{position:fixed;bottom:calc(var(--sab) + 90px);left:50%;transform:translateX(-50%) translateY(20px);
+    z-index:50;background:var(--ink);color:#fff;padding:12px 20px;border-radius:100px;font-size:14px;font-weight:600;
+    opacity:0;transition:.3s;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 </head>
-
 <body>
 
-<header>
-  <div class="wrap">
-    <div class="top-row-container">
-      <div style="display:flex; flex-direction:column; gap:5px;">
-        <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
-            <h1 style="margin:0;">KORONÁRNA JIS</h1>
-            <div class="link-bar">
-                <a href="https://bingo780.github.io/jis-dekurz/" target="_blank" class="link-btn highlight">
-                   <span>🌐</span> JIS Dekurz
-                </a>
-                <a href="https://bingo780.github.io/hsios/" target="_blank" class="link-btn highlight">
-                   <span>🌐</span> JIS dekurz ios </a>
-                <a href="https://bingo780.github.io/sklad/" target="_blank" class="link-btn highlight">
-                   <span>🌐</span> JIS sklad </a>
-                <a href="https://bingo780.github.io/tlacstitku/" target="_blank" class="link-btn highlight">
-                   <span>🌐</span> Tlač štítku </a>               
-                <a href="https://bingo780.github.io/Stylus/" target="_blank" class="link-btn highlight">
-                   <span>🌐</span> Stylus </a> 
-            </div>
-        </div>
-        <div class="subtitle">v1.50 | Hybrid Logic (No Duplicates)</div>
+<!-- START -->
+<section class="screen active" id="start">
+  <div>
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#F3EFE4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>
+        <path d="M7 12h10M9 12v3M15 12V9"/>
+      </svg>
+    </div>
+    <h1>Skener<br>expirácie</h1>
+    <p>Prilož obal ku kamere tak, aby bol dátum spotreby (EXP) v rámčeku. Výsledok uvidíš okamžite.</p>
+    <div class="hint-list">
+      <div class="hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        <span>Beží priamo v telefóne — bez fotenia a bez odosielania.</span>
       </div>
-      
-      <div class="nav-bar">
-          <div class="nav-btn all-btn active" id="nav_btn_all" onclick="showAllPatients()">Všetci</div>
-          <div class="nav-btn" id="nav_btn_1" onclick="focusPatient(1)">1</div>
-          <div class="nav-btn" id="nav_btn_2" onclick="focusPatient(2)">2</div>
-          <div class="nav-btn" id="nav_btn_3" onclick="focusPatient(3)">3</div>
-          <div class="nav-btn" id="nav_btn_4" onclick="focusPatient(4)">4</div>
-          <div class="nav-btn" id="nav_btn_5" onclick="focusPatient(5)">5</div>
+      <div class="hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8M8 6l4-4 4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+        <span>Pri prvom spustení sa raz stiahne rozpoznávací modul, potom funguje offline.</span>
+      </div>
+      <div class="hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>Ak kamera nenaskočí, otvor súbor v Safari a povoľ prístup ku kamere.</span>
       </div>
     </div>
-
-    <div class="btnrow">
-        <button class="view-toggle" onclick="toggleLayout()">📱/💻</button>
-        <button class="usb-btn" onclick="openLocalFile()">📂 Otvoriť (USB)</button>
-        <button class="primary" onclick="printFilledIOS()">🖨️ Tlač</button>
-        <button onclick="exportJSON()">Export</button>
-        <button onclick="document.getElementById('fileImport').click()">Import</button>
-        <button class="danger" onclick="resetAll()">Vymazať</button>
-        
-        <div class="file-status" id="statusBox" style="display:none;">
-          <div class="dot" id="statusDot"></div>
-          <span id="statusText">Lokálny režim</span>
-        </div>
-    </div>
-    
-    <input id="fileImport" type="file" accept="application/json" class="hidden" />
   </div>
-</header>
+  <button class="start-btn" id="startBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+    Spustiť skener
+  </button>
+</section>
 
-<main class="wrap">
-  <div class="card">
-    <div class="cardhead"><b>Hlavička služby & Odídení</b></div>
-    <div class="content" style="display:flex; gap:20px; flex-wrap:wrap;">
-      
-      <div style="flex:1; min-width:300px;">
-        <div class="row">
-          <div>
-            <label>Služba</label>
-            <select id="shiftType">
-              <option value="celodenna">Celodenné hlásenie</option>
-              <option value="nocna">Nočné hlásenie</option>
-            </select>
-          </div>
-          <div>
-            <label>Sestra</label>
-            <input id="nurseName" type="text" placeholder="Meno sestry" />
-          </div>
-        </div>
-        <div class="row">
-          <div>
-            <label>Dátum (dátum hlásenia)</label>
-            <input id="handoverDay" type="date" />
-            <div class="inlineTools">
-              <button class="mini" onclick="setHeaderDay('today')">Dnes</button>
-              <button class="mini" onclick="setHeaderDay('tomorrow')">Zajtra</button>
-            </div>
-          </div>
-          <div style="font-size:12px; color:var(--muted); padding-top:10px;">
-            Dátum určuje prepočet dní (chir, cvk...).
-          </div>
-        </div>
-      </div>
-
-      <div style="flex:1; min-width:300px; border-left:1px solid var(--border); padding-left:20px;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-          <b style="font-size:13px;">Odídení / Exitus</b>
-          <span class="badge" id="leftCount">0</span>
-        </div>
-        <div id="leftList" style="max-height:120px; overflow-y:auto;"></div>
-      </div>
-
+<!-- CAMERA -->
+<section class="screen" id="cam">
+  <video id="video" playsinline muted autoplay></video>
+  <div class="cam-top">
+    <div class="cam-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
+      Namier na EXP
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="icon-btn" id="torchBtn" title="Svetlo" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6l-1 7h3l-8 13 2-9H8l1-11z"/></svg>
+      </button>
+      <button class="icon-btn" id="listBtn" title="Uložené">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      </button>
     </div>
   </div>
 
-  <div id="patients"></div>
-</main>
+  <div class="reticle">
+    <div class="reticle-label">Dátum EXP do rámčeka</div>
+    <div class="scanline"></div>
+  </div>
+
+  <div class="panel">
+    <div class="status-card searching live" id="statusCard">
+      <div class="sc-dot"></div>
+      <div class="sc-label" id="scLabel">Hľadám dátum…</div>
+      <div class="sc-sub" id="scSub">Drž obal stabilne, ostro a v dobrom svetle</div>
+      <div class="sc-read" id="scRead"></div>
+    </div>
+    <div class="save-row hidden" id="saveRow">
+      <button class="pbtn again" id="againBtn">Skenovať ďalšie</button>
+      <button class="pbtn save" id="saveBtn">Uložiť do zoznamu</button>
+    </div>
+  </div>
+
+  <div class="prep" id="prep">
+    <div class="spinner"></div>
+    <b>Pripravujem skener…</b>
+    <span id="prepSub">Sťahujem rozpoznávací modul (raz)</span>
+  </div>
+</section>
+
+<!-- ERROR -->
+<section class="screen" id="err">
+  <div class="ic">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+  </div>
+  <h2>Kamera nie je dostupná</h2>
+  <p id="errMsg">Tejto stránke sa nepodarilo získať prístup ku kamere.</p>
+  <ol>
+    <li>Otvor tento súbor v prehliadači <b>Safari</b>.</li>
+    <li>Pri otázke „Povoliť prístup ku kamere" ťukni na <b>Povoliť</b>.</li>
+    <li>Skontroluj Nastavenia → Safari → Kamera → Povoliť.</li>
+  </ol>
+  <button class="start-btn" id="retryBtn">Skúsiť znova</button>
+</section>
+
+<!-- LIST -->
+<section class="screen" id="list">
+  <div class="list-head">
+    <h2>Uložené položky</h2>
+    <button class="icon-btn" id="backBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+  </div>
+  <div class="list-body" id="listBody"></div>
+</section>
+
+<canvas id="canvas" style="display:none"></canvas>
+<div class="toast" id="toast"></div>
 
 <script>
-  const STORAGE_KEY = "HLASENIE_V150_HYBRID";
+const $=id=>document.getElementById(id);
+const video=$('video'), canvas=$('canvas');
+let stream=null, track=null, worker=null, scanning=false, busy=false, loopT=null;
+let stable={key:null,count:0}, locked=null;
+let items=[];
 
-  // --- LAYOUT TOGGLE LOGIC ---
-  function toggleLayout() {
-      const body = document.body;
-      if (body.classList.contains('force-mobile')) {
-          body.classList.remove('force-mobile');
-          body.classList.add('force-desktop');
-          alert("Prepnuté na: DESKTOP (Grid)");
-      } else if (body.classList.contains('force-desktop')) {
-          body.classList.remove('force-desktop');
-          alert("Prepnuté na: AUTO (Podľa šírky)");
-      } else {
-          body.classList.add('force-mobile');
-          alert("Prepnuté na: MOBIL (Pod sebou)");
-      }
+const hasStore=typeof window.storage!=='undefined' && window.storage;
+const KEY='skener:items';
+
+function show(s){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));$(s).classList.add('active');}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);}
+
+/* ---------- storage ---------- */
+async function load(){
+  if(!hasStore)return;
+  try{const r=await window.storage.get(KEY,false);items=r&&r.value?JSON.parse(r.value):[];}catch(e){items=[];}
+}
+async function persist(){if(!hasStore)return;try{await window.storage.set(KEY,JSON.stringify(items),false);}catch(e){}}
+
+/* ---------- start ---------- */
+$('startBtn').onclick=startScanner;
+$('retryBtn').onclick=startScanner;
+
+async function startScanner(){
+  show('cam');
+  $('prep').classList.add('show');
+  // 1) camera
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+  }catch(e){
+    try{stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});}
+    catch(e2){ $('prep').classList.remove('show'); $('errMsg').textContent=errText(e2); show('err'); return; }
   }
-
-  // --- SINGLE VIEW / FOCUS MODE LOGIC ---
-  function showAllPatients() {
-      document.querySelectorAll('.patientCard').forEach(c => c.classList.remove('patient-hidden'));
-      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById('nav_btn_all').classList.add('active');
-  }
-
-  function focusPatient(i){
-    document.querySelectorAll('.patientCard').forEach(c => c.classList.add('patient-hidden'));
-    const card = document.getElementById(`patient_${i}`);
-    if(card) {
-      card.classList.remove('patient-hidden');
-      card.scrollIntoView({behavior: "smooth", block: "start"});
+  video.srcObject=stream;
+  try{await video.play();}catch(e){}
+  track=stream.getVideoTracks()[0];
+  setupTorch();
+  // 2) OCR engine
+  try{
+    if(!worker){
+      $('prepSub').textContent='Sťahujem rozpoznávací modul (raz)';
+      worker=await Tesseract.createWorker('eng');
+      await worker.setParameters({tessedit_char_whitelist:'0123456789EXPexpESxaržeČ.:/- '});
     }
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    const btn = document.getElementById(`nav_btn_${i}`);
-    if(btn) btn.classList.add('active');
+  }catch(e){
+    $('prep').classList.remove('show');
+    $('errMsg').textContent='Rozpoznávací modul sa nepodarilo načítať. Skontroluj pripojenie pri prvom spustení a skús znova.';
+    show('err');return;
   }
-
-  // --- USB / FILE / IMPORT LOGIC ---
-  let fileHandle = null;
-  let usbSaveTimer = null;
-
-  async function openLocalFile() {
-    if (!('showOpenFilePicker' in window)) {
-      alert("Tento prehliadač nepodporuje priamy zápis na USB.");
-      return;
-    }
-    try {
-      const [handle] = await window.showOpenFilePicker({
-        types: [{ description: 'JSON Súbory', accept: { 'application/json': ['.json'] } }],
-        multiple: false
-      });
-      fileHandle = handle;
-      const file = await fileHandle.getFile();
-      const text = await file.text();
-      if (text.trim().length > 0) {
-        try {
-          JSON.parse(text);
-          localStorage.setItem(STORAGE_KEY, text);
-          load();
-          alert("Dáta z USB načítané ✅");
-        } catch (e) {
-          alert("Súbor je poškodený. Začínam prázdny formulár.");
-          resetAll(false);
-        }
-      } else {
-        alert("Súbor je prázdny. Môžeš začať písať.");
-      }
-      updateFileStatus(true, file.name);
-    } catch (err) {
-      if (err.name !== 'AbortError') { console.error(err); alert("Nepodarilo sa otvoriť súbor."); }
-    }
-  }
-
-  document.getElementById('fileImport').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const text = e.target.result;
-          JSON.parse(text); 
-          localStorage.setItem(STORAGE_KEY, text);
-          load();
-          alert("Dáta úspešne importované ✅");
-        } catch (err) {
-          console.error(err);
-          alert("Chyba: Súbor je poškodený alebo nie je platný JSON.");
-        }
-      };
-      reader.readAsText(file);
-      e.target.value = ''; 
-  });
-
-  function scheduleSaveToDisk(){
-    if(!fileHandle) return;
-    if(usbSaveTimer) clearTimeout(usbSaveTimer);
-    usbSaveTimer = setTimeout(()=>{ saveToDisk(); }, 1000);
-  }
-
-  async function saveToDisk() {
-    if (!fileHandle) return;
-    try {
-      updateFileStatus(true, "Ukladám...", true);
-      const writable = await fileHandle.createWritable();
-      const data = localStorage.getItem(STORAGE_KEY) || "{}";
-      await writable.write(data);
-      await writable.close();
-      setTimeout(() => {
-        const fname = fileHandle?.name || "Súbor";
-        updateFileStatus(true, fname);
-      }, 400);
-    } catch (err) {
-      console.error("Chyba zápisu na USB:", err);
-      updateFileStatus(false, "Chyba zápisu!");
-    }
-  }
-
-  function updateFileStatus(connected, text, saving = false) {
-    const box = document.getElementById("statusBox");
-    const dot = document.getElementById("statusDot");
-    const txt = document.getElementById("statusText");
-    box.style.display = "inline-flex";
-    txt.textContent = text;
-    dot.className = "dot";
-    if (saving) dot.classList.add("saving");
-    else if (connected) dot.classList.add("active");
-    else dot.classList.add("error");
-  }
-
-  // ------- Helpers -------
-  function pad(n){ return String(n).padStart(2,'0'); }
-  function todayISO(){
-    const d = new Date();
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  }
-  function isoAddDays(iso, add){
-    if(!iso) return "";
-    const d = new Date(iso + "T00:00:00");
-    if(isNaN(d.getTime())) return ""; 
-    d.setDate(d.getDate() + add);
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  }
-  function cleanSpaces(s){ return String(s||"").replace(/\s+/g," ").trim(); }
-  function escapeHTML(str){
-    return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
-  }
-  function formatDateSK(iso){
-    if(!iso) return "";
-    const d = iso.split("-");
-    return `${d[2]}.${d[1]}.${d[0]}`.trim();
-  }
-  function formatTimeSK(timeStr){
-    if(!timeStr) return "";
-    let t = timeStr.trim();
-    if(t.startsWith("0")) t = t.substring(1); 
-    t = t.replace(":", ",");
-    return `${t} hod.`;
-  }
-  function setHeaderDay(which){
-    let d = todayISO();
-    if(which === "tomorrow") d = isoAddDays(todayISO(),1);
-    document.getElementById("handoverDay").value = d;
-    save();
-  }
-  function defaultHeaderDay(){ document.getElementById("handoverDay").value = todayISO(); }
-
-  // ------- Rendering -------
-  function patientTemplate(i){
-    let bloodSlotsHTML = "";
-    for(let s=1; s<=4; s++){
-      bloodSlotsHTML += `
-      <div id="blood_wrap_${i}_${s}" class="blood-slot-container">
-        <div style="margin-bottom:10px; border-bottom:1px dashed var(--border); padding-bottom:5px;">
-          <input type="checkbox" class="hidden" data-k="p${i}_blood${s}_on" onchange="syncBloodVisibility(${i})" />
-          <input type="hidden" data-k="p${i}_blood${s}_today_accumulator" value="0" />
-           
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-             <div><b>Prípravok ${s}</b><span id="blood_summary_${i}_${s}" class="blood-summary-text"></span></div>
-             <button class="mini danger" type="button" onclick="removeBloodSlot(${i}, ${s})">Zmazať</button>
-          </div>
-          <div class="row">
-            <div><label>Typ</label><select id="p${i}_b${s}_type" data-k="p${i}_blood${s}_type"><option value="">-</option><option value="TUEM">TUEM</option><option value="ČMP">ČMP</option><option value="TK">trombokoncentrát</option></select></div>
-            <div><label>Pripravené</label><input id="p${i}_b${s}_ready" data-k="p${i}_blood${s}_ready" type="number" min="0" placeholder="zostatok" /></div>
-          </div>
-          <div class="row">
-            <div><label>Zaistené</label><input id="p${i}_b${s}_sec" data-k="p${i}_blood${s}_secured" type="number" min="0" /></div>
-            <div><label>Podané / Plán</label><div style="display:flex; gap:2px;"><input id="p${i}_b${s}_given" data-k="p${i}_blood${s}_given_count" type="number" min="0" style="width:60%" /><button class="mini ok" style="width:40%" onclick="applyBloodGiven(${i},${s})">Podať</button></div></div>
-          </div>
-          <div class="row">
-            <div><label>Kedy (dátum)</label><input id="p${i}_b${s}_date" data-k="p${i}_blood${s}_date" type="date"/><div class="inlineTools"><button class="mini" onclick="setDate('p${i}_blood${s}_date','today')">Dnes</button><button class="mini" onclick="setDate('p${i}_blood${s}_date','tomorrow')">Zajtra</button></div></div>
-            <div><label>Kedy (čas)</label><input id="p${i}_b${s}_time" data-k="p${i}_blood${s}_time" type="time"/></div>
-          </div>
-        </div>
-      </div>`;
-    }
-
-    return `
-    <section class="card patientCard" id="patient_${i}">
-      <div class="cardhead" onclick="focusPatient(${i})">
-        <b>Pacient ${i} – klikni pre úpravu</b>
-        <div style="display:flex; gap:8px;">
-          <button class="mini ok" onclick="finishPatient(${i}); event.stopPropagation();">Uložiť ako odídený</button>
-          <button class="mini danger" onclick="clearPatient(${i}); event.stopPropagation();">Vymazať</button>
-        </div>
-      </div>
-
-      <div class="content">
-        <div class="mini4">
-          <div><label>Izba/lôžko</label><input data-k="p${i}_bed" type="text" placeholder="" /></div>
-          <div><label>Priezvisko</label><input data-k="p${i}_surname" type="text" placeholder="Novák" /></div>
-          <div><label>Meno</label><input data-k="p${i}_name" type="text" placeholder="Ján" /></div>
-          <div>
-            <label>PR</label>
-            <select data-k="p${i}_pr">
-              <option value="">-</option>
-              <option value="A">A</option>
-              <option value="A+WC">A+WC</option>
-              <option value="A KOS">A KOS</option>
-              <option value="B">B</option>
-              <option value="C">C</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="row top-row" style="align-items: end;">
-          <div style="display:flex; flex-direction:column; gap:10px;">
-              <div>
-                 <label>AA: (alergia)</label>
-                 <input class="aaInput" data-k="p${i}_allergy" type="text" placeholder="napr. Penicilín" />
-              </div>
-              
-              <div>
-                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                    <label style="margin:0;">Izolácia</label>
-                    <input type="checkbox" data-k="p${i}_iso_on" onchange="syncPatient(${i})" style="width:20px; height:20px; margin:0;" title="Zapnúť červené zvýraznenie" />
-                 </div>
-                 <input type="text" id="iso_input_${i}" data-k="p${i}_iso_reason" placeholder="Dôvod (napr. Clostridium)" style="width:100%; display:block;" />
-              </div>
-          </div>
-
-          <div>
-             <label>Dátum prijatia</label>
-             <input data-k="p${i}_admit_date" type="date" />
-             <div class="inlineTools"><button class="mini" onclick="setDate('p${i}_admit_date','today')">Dnes</button><button class="mini" onclick="setDate('p${i}_admit_date','yesterday')">Včera</button></div>
-          </div>
-        </div>
-
-        <div class="subBlock">
-          <label>Základné sledovanie</label>
-          <div class="row">
-            <div><label>EKG</label><input data-k="p${i}_ekg" type="text" placeholder="denne / VV" /></div>
-            <div><label>TK</label><input data-k="p${i}_tk" type="text" placeholder="šoková / 3x" /></div>
-          </div>
-          
-          <div class="checks">
-             <label><input type="checkbox" data-k="p${i}_mon_check" /> monitorovať</label>
-          </div>
-          
-          <div style="display:flex; gap:10px; margin-top:8px; border-top:1px dashed var(--border); padding-top:5px;">
-             <div style="flex:1;">
-                <label>P+V Bilancia</label>
-                <div class="checks"><label><input type="checkbox" data-k="p${i}_pv_check" /> P+V</label></div>
-             </div>
-          </div>
-
-          <div style="margin-top:12px; margin-bottom:12px; background:#f9f9f9; padding:8px; border-radius:6px; border:1px solid #ddd;">
-               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                   <label style="margin:0; font-weight:700; color:var(--primary);">MM (Moč)</label>
-                   <input type="checkbox" data-k="p${i}_mm_on" onchange="syncPatient(${i})" style="width:20px; height:20px; margin:0;" />
-               </div>
-               <div id="mm_box_${i}" class="hidden">
-                  <input data-k="p${i}_mm_value" type="text" placeholder="objem/hod" style="width:100%; display:block;" />
-               </div>
-          </div>
-          
-          <div style="margin-top:8px; border-top:1px dashed var(--border); padding-top:5px;">
-            <div class="row">
-               <div><label>Stolica</label><input data-k="p${i}_stolica" type="text" placeholder="1x" /></div>
-               <div>
-                  <div class="checks"><label><input type="checkbox" data-k="p${i}_kolo_on" onchange="syncPatient(${i})" /> Kolostómia</label></div>
-               </div>
-            </div>
-            <div id="kolo_box_${i}" class="hidden custom-box">
-                <div class="row" style="margin:0;">
-                    <div><label>Založenie</label><input data-k="p${i}_kolo_date" type="date" /></div>
-                    <div><label>Frekvencia</label><input data-k="p${i}_kolo_freq" type="text" /></div>
-                </div>
-            </div>
-          </div>
-
-          <div style="margin-top:10px; border-top:1px dashed var(--border); padding-top:5px;">
-             <label>Sledovať (krvácanie...)</label>
-             <input data-k="p${i}_watch" type="text" />
-          </div>
-        </div>
-
-        <div class="subBlock">
-             <label>Metabolizmus & Lieky</label>
-             <div class="row">
-                <div><label>Režim</label><select data-k="p${i}_gp_type"><option value="">-</option><option value="MGP">MGP</option><option value="RGP">RGP</option><option value="VGP">VGP</option></select></div>
-                <div>
-                   <label>Inzulín</label>
-                   <div class="checks"><label><input type="checkbox" data-k="p${i}_inz_on" /> dľa glykémie</label></div>
-                   <div id="inz_box_${i}" class="hidden" style="margin-top:4px;">
-                      <select data-k="p${i}_inz_loc"><option value="">Perá nevyplnené</option><option value="u seba">U seba</option><option value="v chladničke">V chladničke</option></select>
-                   </div>
-                </div>
-             </div>
-             <div style="margin-top:8px;"><label>Lieky (stručne)</label><input data-k="p${i}_drugs" type="text" placeholder="ASA, Betaloc..." /></div>
-             <div style="margin-top:4px;"><label>Poznámka</label><input data-k="p${i}_note" type="text" placeholder="iné..." /></div>
-             
-             <div style="margin-top:10px; padding-top:5px; border-top:1px dashed var(--border);">
-                 <label>ATB Terapia</label>
-                 <div id="atb_list_${i}"></div>
-                 <button class="mini primary" type="button" onclick="addATB(${i})">+ Pridať ATB</button>
-             </div>
-        </div>
-
-        <div class="subBlock">
-          <label>Vstupy & Katétre</label>
-          <div class="checks">
-            <label><input type="checkbox" data-k="p${i}_iv_chir_on" onchange="syncPatient(${i})" /> CHIR</label>
-            <label><input type="checkbox" data-k="p${i}_iv_cvk_on" onchange="syncPatient(${i})" /> CVK</label>
-            <label><input type="checkbox" data-k="p${i}_iv_hd_on" onchange="syncPatient(${i})" /> HD kav.</label>
-            <label><input type="checkbox" data-k="p${i}_iv_hrd_on" onchange="syncPatient(${i})" /> Hr drén</label>
-            <label><input type="checkbox" data-k="p${i}_pk_on" onchange="syncPatient(${i})" /> PK</label>
-            <label><input type="checkbox" data-k="p${i}_peg_on" onchange="syncPatient(${i})" /> PEG</label>
-            <label><input type="checkbox" data-k="p${i}_ngs_on" onchange="syncPatient(${i})" /> NGS</label>
-            <label><input type="checkbox" data-k="p${i}_nefro_on" onchange="syncPatient(${i})" /> Nefro</label>
-            <label><input type="checkbox" data-k="p${i}_custom_in_on" onchange="syncPatient(${i})" /> Iné</label>
-          </div>
-          
-          <div id="iv_chir_box_${i}" class="hidden row" style="margin-top:5px;"><div class="inlineTools"><label>CHIR dátum</label><input data-k="p${i}_iv_chir_date" type="date" /><button class="mini" onclick="setDate('p${i}_iv_chir_date','today')">Dnes</button></div><div></div></div>
-          <div id="iv_cvk_box_${i}" class="hidden row" style="margin-top:5px;"><div class="inlineTools"><label>CVK dátum</label><input data-k="p${i}_iv_cvk_date" type="date" /><button class="mini" onclick="setDate('p${i}_iv_cvk_date','today')">Dnes</button></div><div></div></div>
-          <div id="iv_hd_box_${i}" class="hidden row" style="margin-top:5px;"><div class="inlineTools"><label>HD dátum</label><input data-k="p${i}_iv_hd_date" type="date" /><button class="mini" onclick="setDate('p${i}_iv_hd_date','today')">Dnes</button></div><div></div></div>
-          
-          <div id="iv_hrd_box_${i}" class="hidden custom-box">
-             <div class="row" style="margin:0;"><div><label>Drén dátum</label><input data-k="p${i}_iv_hrd_date" type="date" /></div><div><label>Výdaj ml/h</label><input data-k="p${i}_iv_hrd_out" type="text" /></div></div>
-          </div>
-          
-          <div id="pk_box_${i}" class="hidden row" style="margin-top:5px;"><div class="inlineTools"><label>PK dátum</label><input data-k="p${i}_pk_date" type="date" /><button class="mini" onclick="setDate('p${i}_pk_date','today')">Dnes</button></div><div></div></div>
-          <div id="peg_box_${i}" class="hidden row" style="margin-top:5px;"><div class="inlineTools"><label>PEG dátum</label><input data-k="p${i}_peg_date" type="date" /><button class="mini" onclick="setDate('p${i}_peg_date','today')">Dnes</button></div><div></div></div>
-          
-          <div id="ngs_box_${i}" class="hidden custom-box">
-             <div class="row" style="margin:0;"><div><label>NGS dátum</label><input data-k="p${i}_ngs_date" type="date" /></div><div><label>Výdaj ml/h</label><input data-k="p${i}_ngs_out" type="text" /></div></div>
-          </div>
-          
-          <div id="nefro_box_${i}" class="hidden custom-box">
-             <div class="row" style="margin:0;"><div><label>Nefro dátum</label><input data-k="p${i}_nefro_date" type="date" /></div><div><label>Výdaj</label><input data-k="p${i}_nefro_out" type="text" /></div></div>
-          </div>
-          
-          <div id="custom_in_box_${i}" class="hidden custom-box">
-              <label>Názov vstupu</label><input data-k="p${i}_custom_in_name" type="text" />
-              <div class="row" style="margin-top:5px; margin-bottom:0;">
-                  <div><label>Dátum</label><input data-k="p${i}_custom_in_date" type="date" /></div>
-                  <div><label>Poznámka</label><input data-k="p${i}_custom_in_note" type="text" /></div>
-              </div>
-          </div>
-
-          <div style="margin-top:10px; border-top:1px dashed var(--border); padding-top:5px;">
-              <label>Kardiostimulátor (KS)</label>
-              <div class="row">
-                <div>
-                   <select data-k="p${i}_ks_type" onchange="syncPatient(${i})"><option value="">Bez KS</option><option value="TKS">TKS</option><option value="DKS">DKS</option><option value="ICD">ICD</option><option value="REVEAL">REVEAL</option></select>
-                </div>
-                <div id="ks_date_box_${i}" class="hidden">
-                    <input data-k="p${i}_ks_date" type="date" placeholder="Dátum" />
-                </div>
-              </div>
-          </div>
-        </div>
-
-        <div class="subBlock">
-          <label>Kontinuálne tečie</label>
-          <div id="cont_list_${i}"></div>
-          <div class="inlineTools">
-            <button class="mini primary" type="button" onclick="addCont(${i})">+ Pridať roztok</button>
-            <button class="mini" type="button" onclick="clearCont(${i})">Vymazať</button>
-          </div>
-          
-          <div style="border-top:1px dashed var(--border); margin-top:10px; padding-top:5px;">
-              <div class="row">
-                <div><label>s.c.</label><input data-k="p${i}_sc" type="text" placeholder="Fraxiparine 2x" /></div>
-                <div><label>i.v. bolus</label><input data-k="p${i}_iv_med" type="text" placeholder="MgSO4" /></div>
-              </div>
-              <div><label>inf. (ostatné)</label><input data-k="p${i}_inf" type="text" placeholder="R,O,V alebo 3x" /></div>
-          </div>
-        </div>
-
-        <div class="subBlock">
-             <div style="display:flex; justify-content:space-between; align-items:center;">
-               <label style="margin:0;">Kyslíková terapia</label>
-               <div class="checks" style="padding:0;"><label><input type="checkbox" data-k="p${i}_oxy_on" onchange="syncPatient(${i})" /> Zapnúť</label></div>
-             </div>
-             <div id="oxy_box_${i}" class="hidden" style="margin-top:8px;">
-                 <div class="oxy-layout">
-                    <div>
-                       <label>Režim</label>
-                       <select data-k="p${i}_oxy_mode" onchange="syncPatient(${i})">
-                         <option value="kontinuálne">Kontinuálne</option>
-                         <option value="intermitentne">Intermitentne</option>
-                         <option value="p.p.">p.p.</option>
-                       </select>
-                    </div>
-                    <div id="oxy_config_${i}">
-                        <div class="row" style="margin-bottom:0;">
-                           <div><label>Prietok (l/min)</label><input type="number" data-k="p${i}_oxy_flow" placeholder="2" /></div>
-                           <div>
-                             <label>Spôsob</label>
-                             <select data-k="p${i}_oxy_method">
-                               <option value="masku">Maska</option>
-                               <option value="okuliare">Okuliare</option>
-                               <option value="High-Flow Nasal">High-Flow</option>
-                             </select>
-                           </div>
-                        </div>
-                    </div>
-                 </div>
-             </div>
-        </div>
-
-        <div class="subBlock">
-          <label>Krvné prípravky</label>
-          ${bloodSlotsHTML}
-          <div class="inlineTools" style="margin-top:10px;">
-            <button class="primary mini" type="button" onclick="activateNextBloodSlot(${i})">+ Pridať</button>
-            <button class="mini danger" type="button" onclick="clearBloodAll(${i})">Zmazať všetko</button>
-          </div>
-        </div>
-
-        <div class="subBlock">
-          <label>Laboratórium / Odbery</label>
-          <div class="row">
-             <div>
-               <div class="checks">
-                 <label><input type="checkbox" data-k="p${i}_lab_odbery" /> odbery</label>
-                 <label><input type="checkbox" data-k="p${i}_lab_vytery" /> výtery</label>
-                 <label><input type="checkbox" data-k="p${i}_lab_moc" /> moč K+C</label>
-                 <label><input type="checkbox" data-k="p${i}_lab_antigeny" /> antigény</label>
-               </div>
-               <div style="margin-top:5px;">
-                  <label>Výsledky / Poznámka</label>
-                  <input type="text" data-k="p${i}_lab_note" placeholder="napr. CRP 50, TnT 120..." />
-               </div>
-             </div>
-             <div>
-               <label>Realizované (kedy)</label>
-               <input data-k="p${i}_lab_date" type="date" />
-               <div class="inlineTools">
-                 <button class="mini" onclick="setDate('p${i}_lab_date','today')">Dnes</button>
-                 <button class="mini" onclick="setDate('p${i}_lab_date','yesterday')">Včera</button>
-               </div>
-               <div style="margin-top:4px;"><label>Čas (nepovinné)</label><input data-k="p${i}_lab_time" type="time" /></div>
-             </div>
-          </div>
-          
-          <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:5px;">
-            <div class="row">
-               <div>
-                  <label>PLÁN (čo)</label>
-                  <input type="text" data-k="p${i}_lab_plan" placeholder="napr. kontrola ranné..." />
-               </div>
-               <div>
-                  <label>PLÁN (kedy)</label>
-                  <input data-k="p${i}_lab_plan_date" type="date" />
-                  <div class="inlineTools">
-                     <button class="mini" onclick="setDate('p${i}_lab_plan_date','tomorrow')">Zajtra</button>
-                     <button class="mini" onclick="setDate('p${i}_lab_plan_date','today')">Dnes</button>
-                  </div>
-               </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="subBlock">
-          <label>Hladiny & HK</label>
-          <div class="row">
-            <div><label>Hladina</label><input data-k="p${i}_lvl_name" type="text" placeholder="napr. Vanco" /></div>
-            <div><label>Dátum</label><input data-k="p${i}_lvl_date" type="date" /><div class="inlineTools"><button class="mini" onclick="setDate('p${i}_lvl_date','today')">Dnes</button><button class="mini" onclick="setDate('p${i}_lvl_date','tomorrow')">Zajtra</button></div></div>
-          </div>
-          <div class="row">
-            <div><label>Čas</label><input data-k="p${i}_lvl_time" type="time" /></div>
-            <div><label>Typ</label><div class="checks"><label><input type="checkbox" data-k="p${i}_lvl_obe" /> obe</label></div></div>
-          </div>
-          <div style="border-top:1px dashed var(--border); margin:5px 0;"></div>
-          <label>Hemokultúry</label>
-          <div class="row">
-             <div><div class="checks"><label><input type="checkbox" data-k="p${i}_hk_obe" /> obe</label></div></div>
-             <div><button class="primary mini" onclick="addHK(${i})">+ HK (klik)</button> <button class="mini" onclick="clearHK(${i})">X</button></div>
-          </div>
-          <div id="hk_list_${i}" class="hint"></div>
-          <div class="row" style="margin-top:5px;">
-             <div><label>Plán Dátum</label><input data-k="p${i}_hk_date" type="date" /></div>
-             <div><label>Čas</label><input data-k="p${i}_hk_time" type="time" /></div>
-          </div>
-        </div>
-
-        <div class="subBlock">
-          <label>Ošetrovateľstvo</label>
-          <div class="checks">
-             <label><input type="checkbox" data-k="p${i}_os_rany" /> rany</label>
-             <label><input type="checkbox" data-k="p${i}_os_dekub" /> dekubity</label>
-             <label><input type="checkbox" data-k="p${i}_os_poloh" /> polohovať</label>
-             <label style="margin:0;"><input type="checkbox" data-k="p${i}_os_matrac" /> Antidekubitárny matrac:</label>
-             <select data-k="p${i}_os_matrac_typ" style="width:auto;"><option value="náš">náš</option><option value="pacientov">pacientov</option></select>
-          </div>
-        </div>
-
-        <div class="subBlock">
-          <label>Plánované vyšetrenia</label>
-          ${examBlock(i,1)}
-          <details id="exam2_details_${i}" class="examDetails"><summary>Vyšetrenie 2</summary><div style="margin-top:5px;">${examBlock(i,2, true)}</div></details>
-          <details id="exam3_details_${i}" class="examDetails"><summary>Vyšetrenie 3</summary><div style="margin-top:5px;">${examBlock(i,3, true)}</div></details>
-          <div class="row" style="margin-top:10px;">
-            <div><label>Plán iné</label><textarea data-k="p${i}_planned"></textarea></div>
-            <div><label>Absolvované</label><textarea data-k="p${i}_done"></textarea></div>
-          </div>
-        </div>
-
-        <div class="subBlock">
-          <label>Transport / Ukončenie</label>
-          <div class="row">
-            <div>
-               <label>Typ</label>
-               <select data-k="p${i}_transport_type">
-                 <option value="">(bez zápisu)</option>
-                 <option value="sanitka_ok">Sanitka objednaná</option>
-                 <option value="sanitka_req">Sanitku objednať</option>
-                 <option value="rzp_ok">RZP objednaná</option>
-                 <option value="rzp_req">RZP objednať</option>
-                 <option value="rlp_ok">RLP objednaná</option>
-                 <option value="rlp_req">RLP objednať</option>
-                 <option value="sam">Ide sám</option>
-               </select>
-            </div>
-            <div><label>Kam</label><input data-k="p${i}_transport_dest" type="text" /></div>
-          </div>
-          <div class="row">
-            <div><label>Kedy</label><input data-k="p${i}_transport_date" type="date" /></div>
-            <div><label>Čas</label><input data-k="p${i}_transport_time" type="time" /></div>
-          </div>
-          
-          <div style="margin-top:10px; border-top:1px dashed var(--border); padding-top:5px;">
-             <label>Stav pacienta</label>
-             <textarea data-k="p${i}_status" placeholder="Celkový stav..."></textarea>
-          </div>
-
-          <div style="background:#fefce8; padding:5px; border-radius:4px; margin-top:5px;">
-            <label>Ukončenie</label>
-            <div class="checks">
-                <label><input type="checkbox" data-k="p${i}_discharged" /> prepustený</label>
-                <label><input type="checkbox" data-k="p${i}_transferred" /> preložený</label>
-                <label class="exitus-label"><input type="checkbox" data-k="p${i}_exitus" /> Exitus letalis</label>
-            </div>
-            <div style="margin-top:4px;"><label>Kam</label><input data-k="p${i}_transfer_where" type="text"/></div>
-          </div>
-        </div>
-
-      </div>
-    </section>`;
-  }
-
-  function examBlock(i, n, insideDetails=false){
-    const style = insideDetails ? 'style="margin-bottom:0;"' : '';
-    return `
-      <div class="row" ${style}>
-        <div><label>Názov</label><input data-k="p${i}_exam${n}_text" type="text" placeholder="ECHO" /></div>
-        <div><label>Dátum</label><input data-k="p${i}_exam${n}_date" type="date" /><div class="inlineTools"><button class="mini" onclick="setDate('p${i}_exam${n}_date','today')">Dnes</button><button class="mini" onclick="setDate('p${i}_exam${n}_date','tomorrow')">Zajtra</button></div></div>
-      </div>
-      <div class="row" style="margin-bottom:0;"><div><label>Čas</label><input data-k="p${i}_exam${n}_time" type="time" /></div><div></div></div>`;
-  }
-
-  function render(){
-    const root = document.getElementById("patients");
-    root.innerHTML = "";
-    for(let i=1;i<=5;i++){
-      root.insertAdjacentHTML("beforeend", patientTemplate(i));
-    }
-    showAllPatients(); // Default show all
-  }
-
-  // ------- State -------
-  function getVal(k){
-    const el = document.querySelector(`[data-k="${k}"]`);
-    if(!el) return "";
-    if(el.type === "checkbox") return el.checked ? "1" : "";
-    return el.value ?? "";
-  }
-  function setVal(k, v){
-    const el = document.querySelector(`[data-k="${k}"]`);
-    if(!el) return;
-    if(el.type === "checkbox") {
-      el.checked = !!v;
-      if(el.onchange) el.onchange(); 
-    }
-    else el.value = v ?? "";
-  }
-  function getState(){
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return null;
-    try{ return JSON.parse(raw); }catch(e){ return null; }
-  }
-  function ensureState(){
-    let st = getState();
-    if(!st) st = { meta:{}, fields:{}, left:[], hk:{}, cont:{}, given:{}, atb:{} };
-    if(!st.meta) st.meta = {};
-    if(!st.fields) st.fields = {};
-    if(!st.left) st.left = [];
-    if(!st.hk) st.hk = {};
-    if(!st.cont) st.cont = {};
-    if(!st.given) st.given = {};
-    if(!st.atb) st.atb = {};
-    return st;
-  }
-  function save(light=false){
-    const data = ensureState();
-    data.meta.shiftType = document.getElementById("shiftType")?.value || "celodenna";
-    data.meta.handoverDay = document.getElementById("handoverDay")?.value || todayISO();
-    data.meta.nurseName = document.getElementById("nurseName")?.value || "";
-    document.querySelectorAll("[data-k]").forEach(el=>{
-      const k = el.getAttribute("data-k");
-      if(el.type === "checkbox") data.fields[k] = el.checked ? 1 : 0;
-      else data.fields[k] = el.value ?? "";
-    });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    if(fileHandle && !light) scheduleSaveToDisk();
-  }
-  function load(){
-    const st = getState();
-    if(!st){
-      document.getElementById("shiftType").value = "celodenna";
-      document.getElementById("nurseName").value = "";
-      defaultHeaderDay();
-      return;
-    }
-    document.getElementById("shiftType").value = st.meta?.shiftType || "celodenna";
-    document.getElementById("handoverDay").value = st.meta?.handoverDay || todayISO();
-    document.getElementById("nurseName").value = st.meta?.nurseName || "";
-    document.querySelectorAll("[data-k]").forEach(el=>{
-      const k = el.getAttribute("data-k");
-      if(!(k in (st.fields||{}))) return;
-      if(el.type === "checkbox") el.checked = !!st.fields[k];
-      else el.value = st.fields[k] ?? "";
-    });
-    syncAllDynamic();
-    renderLeftList();
-    renderHKLists();
-    renderContLists();
-    renderATBLists();
-  }
-  function resetAll(confirmAsk=true){
-    if(confirmAsk && !confirm("Vymazať všetko?")) return;
-    localStorage.removeItem(STORAGE_KEY);
-    render();
-    document.getElementById("shiftType").value = "celodenna";
-    document.getElementById("nurseName").value = "";
-    defaultHeaderDay();
-    syncAllDynamic();
-    save(true);
-    alert("Vymazané ✅");
-  }
-  function clearPatient(i){
-    if(!confirm(`Vymazať Pacienta ${i}?`)) return;
-    document.querySelectorAll(`#patient_${i} [data-k]`).forEach(el=>{
-      if(el.type === "checkbox") {
-         el.checked = false;
-         if(el.onchange) el.onchange(); 
-      }
-      else el.value = "";
-    });
-    // Clear summaries too
-    for(let s=1;s<=4;s++){
-       const summ = document.getElementById(`blood_summary_${i}_${s}`);
-       if(summ) summ.textContent = "";
-    }
-    const st = ensureState();
-    st.hk[`p${i}`] = [];
-    st.cont[`p${i}`] = [];
-    st.atb[`p${i}`] = [];
-    st.given[`p${i}`] = { TUEM:0, "ČMP":0 };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
-    syncAllDynamic();
-    renderContLists();
-    renderATBLists();
-    renderHKLists();
-    save();
-  }
-  function setDate(key, which){
-    let d = todayISO();
-    if(which === "yesterday") d = isoAddDays(todayISO(), -1);
-    if(which === "tomorrow") d = isoAddDays(todayISO(), 1);
-    setVal(key, d);
-    syncAllDynamic();
-    save();
-  }
-  function syncPatient(i){
-    // MM Sync
-    const mmOn = !!getVal(`p${i}_mm_on`);
-    document.getElementById(`mm_box_${i}`)?.classList.toggle("hidden", !mmOn);
-    if(!mmOn) setVal(`p${i}_mm_value`, "");
-
-    // Colo Sync (ADDED)
-    const koloOn = !!getVal(`p${i}_kolo_on`);
-    document.getElementById(`kolo_box_${i}`)?.classList.toggle("hidden", !koloOn);
-    if(!koloOn){ setVal(`p${i}_kolo_date`,""); setVal(`p${i}_kolo_freq`,""); }
-
-    // KS Sync
-    const ksType = getVal(`p${i}_ks_type`);
-    const needsDateBox = (ksType === "TKS" || ksType === "DKS" || ksType === "ICD" || ksType === "REVEAL");
-    document.getElementById(`ks_date_box_${i}`)?.classList.toggle("hidden", !needsDateBox);
-    if(!needsDateBox) setVal(`p${i}_ks_date`, "");
-    
-    // ISOLATION Visual Sync
-    const isoOn = !!getVal(`p${i}_iso_on`);
-    const isoInput = document.getElementById(`iso_input_${i}`);
-    if(isoInput) {
-        if(isoOn) {
-            isoInput.classList.add("aaInput");
-        } else {
-            isoInput.classList.remove("aaInput");
-        }
-    }
-
-    const chirOn = !!getVal(`p${i}_iv_chir_on`);
-    const cvkOn = !!getVal(`p${i}_iv_cvk_on`);
-    const hdOn  = !!getVal(`p${i}_iv_hd_on`);
-    const hrdOn = !!getVal(`p${i}_iv_hrd_on`);
-    const pkOn  = !!getVal(`p${i}_pk_on`);
-    const pegOn = !!getVal(`p${i}_peg_on`);
-    const ngsOn = !!getVal(`p${i}_ngs_on`);
-    // ADDED: Nefro & Custom
-    const nefroOn = !!getVal(`p${i}_nefro_on`);
-    const customInOn = !!getVal(`p${i}_custom_in_on`);
-
-    document.getElementById(`iv_chir_box_${i}`)?.classList.toggle("hidden", !chirOn);
-    document.getElementById(`iv_cvk_box_${i}`)?.classList.toggle("hidden", !cvkOn);
-    document.getElementById(`iv_hd_box_${i}`)?.classList.toggle("hidden", !hdOn);
-    document.getElementById(`iv_hrd_box_${i}`)?.classList.toggle("hidden", !hrdOn);
-    document.getElementById(`pk_box_${i}`)?.classList.toggle("hidden", !pkOn);
-    document.getElementById(`peg_box_${i}`)?.classList.toggle("hidden", !pegOn);
-    document.getElementById(`ngs_box_${i}`)?.classList.toggle("hidden", !ngsOn);
-    document.getElementById(`nefro_box_${i}`)?.classList.toggle("hidden", !nefroOn);
-    document.getElementById(`custom_in_box_${i}`)?.classList.toggle("hidden", !customInOn);
-
-    if(!chirOn) setVal(`p${i}_iv_chir_date`, "");
-    if(!cvkOn) setVal(`p${i}_iv_cvk_date`, "");
-    if(!hdOn){ setVal(`p${i}_iv_hd_date`, ""); }
-    if(!hrdOn){ setVal(`p${i}_iv_hrd_date`, ""); setVal(`p${i}_iv_hrd_out`, ""); }
-    if(!pkOn) setVal(`p${i}_pk_date`, "");
-    if(!pegOn) setVal(`p${i}_peg_date`, "");
-    if(!ngsOn){ setVal(`p${i}_ngs_date`, ""); setVal(`p${i}_ngs_out`, ""); }
-    if(!nefroOn){ setVal(`p${i}_nefro_date`, ""); setVal(`p${i}_nefro_out`, ""); }
-    if(!customInOn){ setVal(`p${i}_custom_in_name`, ""); setVal(`p${i}_custom_in_date`, ""); setVal(`p${i}_custom_in_note`, ""); }
-
-    // Inzulin sync
-    const inzOn = !!getVal(`p${i}_inz_on`);
-    document.getElementById(`inz_box_${i}`)?.classList.toggle("hidden", !inzOn);
-    
-    // OXYGEN SYNC
-    const oxyOn = !!getVal(`p${i}_oxy_on`);
-    const oxyBox = document.getElementById(`oxy_box_${i}`);
-    oxyBox?.classList.toggle("hidden", !oxyOn);
-    
-    if (oxyOn) {
-        const mode = getVal(`p${i}_oxy_mode`);
-        const configBox = document.getElementById(`oxy_config_${i}`);
-        if (mode === "p.p.") {
-            configBox?.classList.add("hidden");
-        } else {
-            configBox?.classList.remove("hidden");
-        }
-    }
-     
-    // SYNC BLOOD VISIBILITY
-    syncBloodVisibility(i);
-  }
-   
-  function syncAllDynamic(){
-    for(let i=1;i<=5;i++){
-      syncPatient(i);
-    }
-  }
-
-  // ------- Logic -------
-  function finishPatient(i){
-    const moved = moveToLeftIfMarked(i, true);
-    if(!moved) alert("Musíte zaškrtnúť Prepustený, Preložený alebo Exitus!");
-  }
-  function moveToLeftIfMarked(i, force){
-    const discharged = !!getVal(`p${i}_discharged`);
-    const transferred = !!getVal(`p${i}_transferred`);
-    const exitus = !!getVal(`p${i}_exitus`); 
-    
-    if(force && !(discharged || transferred || exitus)) return false;
-    if(!force && !(discharged || transferred || exitus)) return false;
-    
-    const bed = cleanSpaces(getVal(`p${i}_bed`));
-    const surname = cleanSpaces(getVal(`p${i}_surname`));
-    const name = cleanSpaces(getVal(`p${i}_name`));
-    if(!(bed || surname || name)) return false;
-    
-    const st = ensureState();
-    st.left.unshift({
-      ts: new Date().toISOString(),
-      bed, surname, name,
-      allergy: cleanSpaces(getVal(`p${i}_allergy`)),
-      end: { 
-          discharged, 
-          transferred, 
-          exitus, 
-          where: cleanSpaces(getVal(`p${i}_transfer_where`)) 
-      }
-    });
-    
-    // Clear everything
-    document.querySelectorAll(`#patient_${i} [data-k]`).forEach(el=>{
-      if(el.type === "checkbox") {
-        el.checked = false;
-        if(el.onchange) el.onchange(); 
-      }
-      else el.value = "";
-    });
-    // Clear summaries too
-    for(let s=1;s<=4;s++){
-       const summ = document.getElementById(`blood_summary_${i}_${s}`);
-       if(summ) summ.textContent = "";
-    }
-    st.hk[`p${i}`] = [];
-    st.cont[`p${i}`] = [];
-    st.atb[`p${i}`] = [];
-    st.given[`p${i}`] = { TUEM:0, "ČMP":0 };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
-    syncAllDynamic();
-    renderLeftList();
-    renderContLists();
-    renderATBLists();
-    save();
-    return true;
-  }
-  function renderLeftList(){
-    const st = ensureState();
-    const root = document.getElementById("leftList");
-    document.getElementById("leftCount").textContent = String((st.left||[]).length);
-    if(!st.left || st.left.length === 0){ root.innerHTML = `<div class="hint">(zatiaľ nikto)</div>`; return; }
-    root.innerHTML = st.left.slice(0,15).map((x, idx)=>{
-      const fullname = cleanSpaces(`${x.surname} ${x.name}`) || "-";
-      const endLines = [];
-      if(x.end?.discharged) endLines.push("prepustený");
-      if(x.end?.transferred) endLines.push(`preložený: ${x.end?.where || "-"}`);
-      if(x.end?.exitus) endLines.push("EXITUS LETALIS");
-      
-      return `<div style="padding:4px 8px; border-bottom:1px solid var(--border); font-size:11px;">
-          <b>${escapeHTML(x.bed || "-")}</b> ${escapeHTML(fullname)}
-          <span style="color:var(--muted); margin-left:5px;">${escapeHTML(endLines.join(" | "))}</span>
-          <button class="mini danger" style="float:right;" onclick="deleteLeft(${idx})">X</button>
-        </div>`;
-    }).join("");
-  }
-  function deleteLeft(idx){
-    const st = ensureState();
-    st.left.splice(idx,1);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
-    renderLeftList();
-    save();
-  }
-
-  // --- HK / Cont / ATB ---
-  function getHKKey(i){ return `p${i}`; }
-  function addHK(i){
-    const st = ensureState();
-    const key = getHKKey(i);
-    if(!st.hk[key]) st.hk[key] = [];
-    st.hk[key].push({ ts: new Date().toISOString() });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
-    renderHKLists();
-    save();
-  }
-  function clearHK(i){
-    const st = ensureState();
-    st.hk[getHKKey(i)] = [];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
-    renderHKLists();
-    save();
-  }
-  function renderHKLists(){
-    const st = ensureState();
-    const today = todayISO();
-    for(let i=1;i<=5;i++){
-      const list = st.hk[getHKKey(i)] || [];
-      const el = document.getElementById(`hk_list_${i}`);
-      if(!el) continue;
-      const todayCount = list.filter(x => x.ts.startsWith(today)).length;
-      el.innerHTML = list.length ? `Dnes: ${todayCount}, Celkovo: ${list.length}` : "";
-    }
-  }
-
-  function contKey(i){ return `p${i}`; }
-  function addCont(i){
-    const st = ensureState();
-    const key = contKey(i);
-    if(!st.cont[key]) st.cont[key] = [];
-    st.cont[key].push({ bottle:"", volume:"", mix:"", route:"i.v", rate:"" });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
-    renderContLists();
-    save(true);
-  }
-  function clearCont(i){
-    const st = ensureState();
-    st.cont[contKey(i)] = [];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
-    renderContLists();
-    save();
-  }
-  function renderContLists(){
-    const st = ensureState();
-    for(let i=1;i<=5;i++){
-      const root = document.getElementById(`cont_list_${i}`);
-      if(!root) continue;
-      const list = st.cont[contKey(i)] || [];
-      if(list.length===0){ root.innerHTML = `<div class="hint">(nič)</div>`; continue; }
-      root.innerHTML = list.map((x, idx)=>`
-        <div class="row" style="margin-bottom:8px;">
-          <div><label>Fľaša</label><input type="number" value="${escapeHTML(x.bottle||"")}" oninput="setCont(${i},${idx},'bottle',this.value)" placeholder="1" /></div>
-          <div><label>Objem</label><input type="number" value="${escapeHTML(x.volume||"")}" oninput="setCont(${i},${idx},'volume',this.value)" placeholder="250" /></div>
-        </div>
-        <div class="row" style="margin-bottom:8px;">
-          <div><label>Roztok</label><input type="text" value="${escapeHTML(x.mix||"")}" oninput="setCont(${i},${idx},'mix',this.value)" placeholder="5G+NO..." /></div>
-          <div><label>Rýchlosť</label><input type="text" value="${escapeHTML(x.rate||"")}" oninput="setCont(${i},${idx},'rate',this.value)" placeholder="12,4" /></div>
-        </div>
-        <button class="mini danger" onclick="delCont(${i},${idx})">Zmazať</button>
-        <div style="border-top:1px dashed var(--border); margin:10px 0;"></div>
-      `).join("");
-    }
-  }
-  function setCont(i, idx, field, val){
-    const st = ensureState();
-    const key = contKey(i);
-    if(!st.cont[key]) st.cont[key] = [];
-    if(!st.cont[key][idx]) return;
-    st.cont[key][idx][field] = val;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
-    if(fileHandle) scheduleSaveToDisk();
-  }
-  function delCont(i, idx){
-    const st = ensureState();
-    const key = contKey(i);
-    st.cont[key].splice(idx,1);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
-    renderContLists();
-    save();
-  }
-  function contPrint(i){
-    const st = ensureState();
-    const list = st.cont[contKey(i)] || [];
-    return list.map(x=>{
-      if(!(x.bottle||x.volume||x.mix||x.rate)) return "";
-      return cleanSpaces(`kontinuálne tečie ${x.bottle}. fl. ${x.volume} ml ${x.mix} i.v /${x.rate} ml/h/`);
-    }).filter(Boolean).join(", ");
-  }
-   
-  // -- ATB LOGIC --
-  function addATB(i){
-    const st = ensureState();
-    const key = `p${i}`;
-    if(!st.atb[key]) st.atb[key] = [];
-    st.atb[key].push({ name:"", int:"", route:"i.v." });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
-    renderATBLists();
-    save(true);
-  }
-  function renderATBLists(){
-    const st = ensureState();
-    for(let i=1;i<=5;i++){
-      const root = document.getElementById(`atb_list_${i}`);
-      if(!root) continue;
-      const list = st.atb[`p${i}`] || [];
-      if(list.length === 0){ root.innerHTML = `<div class="hint" style="margin-bottom:6px;">(žiadne ATB)</div>`; continue; }
-       
-      root.innerHTML = list.map((x, idx)=>`
-        <div style="background:var(--input-bg); padding:4px; border-radius:4px; border:1px solid var(--border); margin-bottom:4px;">
-          <div class="row" style="margin-bottom:6px;">
-             <div><input type="text" placeholder="Názov ATB" value="${escapeHTML(x.name||"")}" oninput="setATB(${i},${idx},'name',this.value)"></div>
-             <div style="display:flex; gap:4px;">
-                <input type="text" placeholder="á x hod" value="${escapeHTML(x.int||"")}" oninput="setATB(${i},${idx},'int',this.value)">
-                <select style="width:70px;" onchange="setATB(${i},${idx},'route',this.value)">
-                   <option value="i.v." ${x.route==='i.v.'?'selected':''}>i.v.</option>
-                   <option value="per os" ${x.route==='per os'?'selected':''}>per os</option>
-                </select>
-             </div>
-          </div>
-          <button class="mini danger" onclick="delATB(${i},${idx})">Zmazať ATB</button>
-        </div>
-      `).join("");
-    }
-  }
-  function setATB(i, idx, field, val){
-    const st = ensureState();
-    const list = st.atb[`p${i}`];
-    if(list && list[idx]) {
-       list[idx][field] = val;
-       localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
-       if(fileHandle) scheduleSaveToDisk();
-    }
-  }
-  function delATB(i, idx){
-    const st = ensureState();
-    if(st.atb[`p${i}`]) {
-       st.atb[`p${i}`].splice(idx,1);
-       localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
-       renderATBLists();
-       save();
-    }
-  }
-  function atbPrint(i){
-    const st = ensureState();
-    const list = st.atb[`p${i}`] || [];
-    return list.map(x => {
-       if(!x.name) return "";
-       return cleanSpaces(`${x.name} ${x.int} ${x.route}`);
-    }).filter(Boolean).join(", ");
-  }
-
-  // --- BLOOD ---
-  function syncBloodVisibility(i){
-    for(let s=1; s<=4; s++){
-      const isOn = !!getVal(`p${i}_blood${s}_on`);
-      const wrap = document.getElementById(`blood_wrap_${i}_${s}`);
-       
-      const accum = parseInt(getVal(`p${i}_blood${s}_today_accumulator`)||0);
-      const summEl = document.getElementById(`blood_summary_${i}_${s}`);
-      if(summEl) summEl.textContent = accum > 0 ? `(Dnes podané: ${accum})` : "";
-
-      if(wrap){
-        if(isOn) wrap.classList.add("active");
-        else wrap.classList.remove("active");
-      }
-    }
-  }
-
-  function activateNextBloodSlot(i){
-    for(let s=1; s<=4; s++){
-      if(!getVal(`p${i}_blood${s}_on`)){
-        setVal(`p${i}_blood${s}_type`, "");
-        setVal(`p${i}_blood${s}_ready`, "");
-        setVal(`p${i}_blood${s}_secured`, "");
-        setVal(`p${i}_blood${s}_given_count`, "");
-        setVal(`p${i}_blood${s}_date`, "");
-        setVal(`p${i}_blood${s}_time`, "");
-        setVal(`p${i}_blood${s}_today_accumulator`, 0);
-        setVal(`p${i}_blood${s}_on`, 1);
-        save();
-        return;
-      }
-    }
-    alert("Max 4 prípravky.");
-  }
-
-  function removeBloodSlot(i, s){
-    setVal(`p${i}_blood${s}_on`, 0); 
-    setVal(`p${i}_blood${s}_type`, "");
-    setVal(`p${i}_blood${s}_ready`, "");
-    setVal(`p${i}_blood${s}_secured`, "");
-    setVal(`p${i}_blood${s}_given_count`, "");
-    setVal(`p${i}_blood${s}_date`, "");
-    setVal(`p${i}_blood${s}_time`, "");
-    setVal(`p${i}_blood${s}_today_accumulator`, 0);
-    save();
-  }
-   
-  function clearBloodAll(i){
-    for(let s=1; s<=4; s++) removeBloodSlot(i, s);
-  }
-
-  function applyBloodGiven(i, s){
-    const readyKey = `p${i}_blood${s}_ready`;
-    const givenKey = `p${i}_blood${s}_given_count`;
-    const accumKey = `p${i}_blood${s}_today_accumulator`;
-
-    let ready = parseInt(getVal(readyKey) || "0", 10) || 0;
-    let given = parseInt(getVal(givenKey) || "0", 10) || 0;
-    let currentAccum = parseInt(getVal(accumKey) || "0", 10) || 0;
-
-    if(given <= 0) return;
-    let newReady = Math.max(0, ready - given);
-     
-    setVal(readyKey, String(newReady));
-    setVal(accumKey, String(currentAccum + given));
-    setVal(givenKey, "");
-    save();
-    syncBloodVisibility(i);
-  }
-
-  // --- Printing (NO DUPLICATES LOGIC) ---
-  function addComma(parts, piece){ const t = cleanSpaces(piece); if(t) parts.push(t); }
-
-  function makeDayTextFromDate(startISO){
-    if(!startISO) return "";
-    const start = new Date(startISO + "T00:00:00");
-    if(isNaN(start.getTime())) return "";
-    
-    const headerDateVal = document.getElementById("handoverDay").value;
-    let end;
-    if(headerDateVal) {
-      end = new Date(headerDateVal + "T00:00:00");
-    } else {
-      const n = new Date();
-      end = new Date(n.getFullYear(), n.getMonth(), n.getDate());
-    }
-    const diffTime = end - start;
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    const dayCount = diffDays + 1;
-
-    return (dayCount < 1) ? "" : `${dayCount}. deň`;
-  }
-  
-  function getPrintRefDate() {
-    return document.getElementById("handoverDay").value || todayISO();
-  }
-
-  // --- REPLACED: NEW BUCKETING PRINT LOGIC ---
-  function buildPrintRowsSorted(){
-    const items = [];
-    const ref = getPrintRefDate();
-    const tomorr = isoAddDays(ref, 1);
-    const shiftType = document.getElementById("shiftType").value;
-
-    for(let i=1;i<=5;i++){
-      const bed = cleanSpaces(getVal(`p${i}_bed`));
-      if(!bed && !getVal(`p${i}_surname`)) continue;
-      items.push({i, bed});
-    }
-    const parseBed = (s)=>{
-      const m = String(s||"").match(/^\s*(\d+)\s*\/\s*(\d+)\s*$/);
-      if(!m) return {room:9999, bed:9999};
-      return {room: parseInt(m[1],10), bed: parseInt(m[2],10)};
-    };
-    items.sort((a,b)=>{
-      const A = parseBed(a.bed); const B = parseBed(b.bed);
-      if(A.room !== B.room) return A.room - B.room;
-      return A.bed - B.bed;
-    });
-
-    return items.map(({i})=>{
-      const bed = cleanSpaces(getVal(`p${i}_bed`)) || "-";
-      const fullname = cleanSpaces((getVal(`p${i}_surname`) + " " + getVal(`p${i}_name`)).trim()) || "-";
-      const allergy = cleanSpaces(getVal(`p${i}_allergy`));
-       
-      const isoOn = !!getVal(`p${i}_iso_on`);
-      const isoReason = cleanSpaces(getVal(`p${i}_iso_reason`));
-      const isolationHTML = isoOn ? `<div style="color:red; font-weight:bold; font-size:11px; margin-top:2px;">IZOLÁCIA: ${isoReason||"Áno"}</div>` : "";
-
-      const parts = [];
-
-      // 1. ZAKLAD
-      const admit = cleanSpaces(getVal(`p${i}_admit_date`));
-      if(admit && admit === ref) addComma(parts, "NP");
-      
-      const pr = cleanSpaces(getVal(`p${i}_pr`));
-      if(pr) addComma(parts, `"${pr}"`);
-      if(getVal(`p${i}_ekg`)) addComma(parts, `EKG ${getVal(`p${i}_ekg`)}`);
-      if(getVal(`p${i}_mon_check`)) addComma(parts, "monitorovať");
-      if(getVal(`p${i}_tk`)) addComma(parts, `TK ${getVal(`p${i}_tk`)}`);
-
-      // 2. VSTUPY
-      const ksType = cleanSpaces(getVal(`p${i}_ks_type`));
-      const ksDate = cleanSpaces(getVal(`p${i}_ks_date`));
-      if(ksType){
-        const day = makeDayTextFromDate(ksDate);
-        addComma(parts, day ? `${ksType} ${day}` : (ksDate ? ksType : `${ksType} dlhodobo`));
-      }
-      if(getVal(`p${i}_iv_chir_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_iv_chir_date`)); addComma(parts, d ? `CHIR ${d}`:"CHIR"); }
-      if(getVal(`p${i}_iv_cvk_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_iv_cvk_date`)); addComma(parts, d ? `CVK ${d}`:"CVK"); }
-      if(getVal(`p${i}_iv_hd_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_iv_hd_date`)); addComma(parts, `HD kaval ${d||""}`.trim()); }
-      if(getVal(`p${i}_pk_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_pk_date`)); addComma(parts, d ? `PK ${d}`:"PK"); }
-      if(getVal(`p${i}_pv_check`)) addComma(parts, "P+V");
-      if(getVal(`p${i}_mm_on`)) addComma(parts, `MM: ${getVal(`p${i}_mm_value`)}`);
-      
-      const stolica = getVal(`p${i}_stolica`); if(stolica) addComma(parts, `stolica ${stolica}`);
-      if(getVal(`p${i}_kolo_on`)){
-          const d = makeDayTextFromDate(getVal(`p${i}_kolo_date`));
-          const f = getVal(`p${i}_kolo_freq`);
-          addComma(parts, `kolostómia ${d} ${f}`.trim());
-      }
-
-      // -- OXYGEN --
-      if(getVal(`p${i}_oxy_on`)){
-        const mode = getVal(`p${i}_oxy_mode`);
-        if(mode === "p.p."){
-            addComma(parts, "O2 p.p.");
-        } else {
-            const flow = getVal(`p${i}_oxy_flow`);
-            const method = getVal(`p${i}_oxy_method`);
-            addComma(parts, `${mode} inhaluje O2 ${flow} l/min cez ${method}`);
-        }
-      }
-
-      if(getVal(`p${i}_peg_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_peg_date`)); addComma(parts, d ? `PEG ${d}`:"PEG"); }
-      if(getVal(`p${i}_ngs_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_ngs_date`)); const out=cleanSpaces(getVal(`p${i}_ngs_out`)); addComma(parts, `NGS ${d||""} ${out||""}`.trim()); }
-      if(getVal(`p${i}_iv_hrd_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_iv_hrd_date`)); const out=cleanSpaces(getVal(`p${i}_iv_hrd_out`)); addComma(parts, `Hr drén ${d||""} ${out||""}`.trim()); }
-      if(getVal(`p${i}_nefro_on`)){ const d=makeDayTextFromDate(getVal(`p${i}_nefro_date`)); const out=cleanSpaces(getVal(`p${i}_nefro_out`)); addComma(parts, `nefrostómia ${d||""} ${out||""}`.trim()); }
-      if(getVal(`p${i}_custom_in_on`)){
-          const name = getVal(`p${i}_custom_in_name`)||'Iný vstup';
-          const d = makeDayTextFromDate(getVal(`p${i}_custom_in_date`));
-          const note = getVal(`p${i}_custom_in_note`);
-          addComma(parts, `${name} ${d||""} ${note||""}`.trim());
-      }
-
-      // 3. LIEČBA
-      if(getVal(`p${i}_sc`)) addComma(parts, `s.c. ${getVal(`p${i}_sc`)}`);
-      if(getVal(`p${i}_iv_med`)) addComma(parts, `i.v. ${getVal(`p${i}_iv_med`)}`);
-      if(getVal(`p${i}_inf`)) addComma(parts, `inf. ${getVal(`p${i}_inf`)}`);
-      addComma(parts, atbPrint(i));
-      addComma(parts, contPrint(i));
-
-      // 4. HLADINY
-      const lvl = getVal(`p${i}_lvl_name`);
-      if(lvl){
-         const d = getVal(`p${i}_lvl_date`);
-         const t = formatTimeSK(getVal(`p${i}_lvl_time`));
-         const typ = getVal(`p${i}_lvl_obe`) ? "obe" : "reziduálna";
-         let txt = `hladina ${lvl} ${typ}`;
-         if(d === ref) txt = `dnes mal ${txt}`;
-         else if(d === tomorr) txt = `zajtra ${t} ${txt}`;
-         addComma(parts, txt);
-      }
-
-      // 5. DIETA / METABOLIZMUS
-      const gp = cleanSpaces(getVal(`p${i}_gp_type`));
-      if(gp) addComma(parts, gp);
-      if(getVal(`p${i}_inz_on`)){
-        const loc = cleanSpaces(getVal(`p${i}_inz_loc`));
-        addComma(parts, loc ? `Inz. dľa glykémie - perá ${loc}` : `Inz. dľa glykémie`);
-      }
-
-      // 6. KRVNE PRIPRAVKY
-      function bloodPrintMulti(i){
-        const lines = [];
-        for(let s=1;s<=4;s++){
-          if(!getVal(`p${i}_blood${s}_on`)) continue;
-          const type = cleanSpaces(getVal(`p${i}_blood${s}_type`)); if(!type) continue;
-          const ready = parseInt(getVal(`p${i}_blood${s}_ready`)||"0",10)||0;
-          const secured = parseInt(getVal(`p${i}_blood${s}_secured`)||"0",10)||0;
-          const todayGiven = parseInt(getVal(`p${i}_blood${s}_today_accumulator`)||"0",10)||0;
-          const d = cleanSpaces(getVal(`p${i}_blood${s}_date`));
-          const t = formatTimeSK(getVal(`p${i}_blood${s}_time`));
-
-          const parts = [];
-          if(todayGiven > 0) parts.push(`dnes podaná ${todayGiven} ${type}`);
-          let stockParts = [];
-          if(ready > 0) stockParts.push(`${ready} pripravené`);
-          if(secured > 0) stockParts.push(`${secured} zaistené`);
-          if(stockParts.length > 0) parts.push(`${type} ${stockParts.join(", ")}`);
-
-          if(d){
-             let p = ""; let isPlan = false;
-             if(d === ref) { p = "dnes"; isPlan = true; } 
-             else if (d === tomorr) { p = "zajtra"; isPlan = true; }
-             if(isPlan){
-                 if(t) p += ` ${t}`; p += " podať";
-                 const planCount = parseInt(getVal(`p${i}_blood${s}_given_count`)||"0",10)||0;
-                 if(planCount > 0) p += ` ${planCount}`;
-                 p += ` ${type}`;
-                 parts.push(p);
-             }
-          }
-          if(parts.length > 0) lines.push(parts.join("; "));
-        }
-        return lines.join(" | ");
-      }
-      addComma(parts, bloodPrintMulti(i));
-
-      // 7. OŠETROVATEĽSTVO
-      const nur = [];
-      if(getVal(`p${i}_os_rany`)) nur.push("ošetrovanie rán");
-      if(getVal(`p${i}_os_dekub`)) nur.push("ošetrovanie dekubitov");
-      if(getVal(`p${i}_os_poloh`)) nur.push("polohovanie");
-      if(getVal(`p${i}_os_matrac`)) nur.push(`antidekubitný matrac (${getVal(`p${i}_os_matrac_typ`)})`);
-      if(nur.length) addComma(parts, nur.join(", "));
-      if(getVal(`p${i}_watch`)) addComma(parts, `sledovať ${getVal(`p${i}_watch`)}`);
-
-      // === 8. BUCKETING LOGIC (The "No Duplicates" Core) ===
-      let todayBucket = [];
-      let tomorrBucket = [];
-      let otherBucket = {}; 
-
-      // A) Labs DONE
-      const lDate = getVal(`p${i}_lab_date`);
-      const lNote = cleanSpaces(getVal(`p${i}_lab_note`));
-      let lItems = [];
-      if(getVal(`p${i}_lab_odbery`)) lItems.push("odbery");
-      if(getVal(`p${i}_lab_vytery`)) lItems.push("výtery");
-      if(getVal(`p${i}_lab_moc`)) lItems.push("moč K+C");
-      if(getVal(`p${i}_lab_antigeny`)) lItems.push("antigény");
-      if(lNote) lItems.push(lNote);
-
-      if(lItems.length > 0) {
-           let txt = lItems.join(", ");
-           if(lDate === ref || !lDate) todayBucket.push(txt);
-           else if(lDate === tomorr) tomorrBucket.push(txt);
-           else { if(!otherBucket[lDate]) otherBucket[lDate]=[]; otherBucket[lDate].push(`mal ${txt}`); }
-      }
-
-      // B) Exams (Unified)
-      for(let n=1; n<=3; n++){
-           const ed = getVal(`p${i}_exam${n}_date`);
-           const et = cleanSpaces(getVal(`p${i}_exam${n}_text`));
-           const em = formatTimeSK(getVal(`p${i}_exam${n}_time`));
-           if(et) {
-               let str = et; if(em) str = `${str} ${em}`; // e.g. ECHO 14:00
-               if(ed === ref) todayBucket.push(str);
-               else if(ed === tomorr) tomorrBucket.push(str);
-               else if(ed) { if(!otherBucket[ed]) otherBucket[ed]=[]; otherBucket[ed].push(str); }
-               else todayBucket.push(str); // No date = today assumption
-           }
-      }
-
-      // C) Lab PLAN
-      const pd = getVal(`p${i}_lab_plan_date`);
-      let pTxt = cleanSpaces(getVal(`p${i}_lab_plan`));
-      if(pd || pTxt) {
-           if(!pTxt) pTxt = "plán odbery"; // Default text if empty but date exists
-           else pTxt = "plán: " + pTxt;
-           
-           if(pd === tomorr || (!pd && pTxt)) tomorrBucket.push(pTxt);
-           else if(pd === ref) todayBucket.push(pTxt);
-           else if(pd) { if(!otherBucket[pd]) otherBucket[pd]=[]; otherBucket[pd].push(pTxt); }
-      }
-
-      // D) Hemokultúry
-      const hkDate = getVal(`p${i}_hk_date`);
-      const hkTime = formatTimeSK(getVal(`p${i}_hk_time`));
-      const hkObe = !!getVal(`p${i}_hk_obe`) ? " obe" : "";
-      
-      // Check already done today
-      const st = ensureState();
-      const hkList = st.hk[`p${i}`] || [];
-      const todayCount = hkList.filter(x => x.ts.startsWith(todayISO())).length;
-      if(todayCount > 0) todayBucket.push(`odobratá ${todayCount}x HK${hkObe}`);
-      
-      // Future Plan
-      if(hkDate){
-         let txt = `odobrať HK${hkObe}`;
-         if(hkTime) txt += ` ${hkTime}`;
-         if(hkDate === ref) todayBucket.push(txt);
-         else if(hkDate === tomorr) tomorrBucket.push(txt);
-      }
-
-      // --- ASSEMBLE BUCKETS ---
-      if(todayBucket.length) {
-          if(shiftType === "celodenna") addComma(parts, "dnes mal " + todayBucket.join(", "));
-          else addComma(parts, "dnes " + todayBucket.join(", "));
-      }
-      
-      if(tomorrBucket.length) addComma(parts, "zajtra " + tomorrBucket.join(", "));
-      
-      Object.keys(otherBucket).sort().forEach(iso => {
-          addComma(parts, `${formatDateSK(iso)} ${otherBucket[iso].join(", ")}`);
-      });
-
-
-      // 10. TRANSPORT / PREKLAD
-      const transType = cleanSpaces(getVal(`p${i}_transport_type`));
-      const transDest = cleanSpaces(getVal(`p${i}_transport_dest`));
-      const transDate = cleanSpaces(getVal(`p${i}_transport_date`));
-      const transTime = formatTimeSK(getVal(`p${i}_transport_time`));
-
-      if(transType && transType !== "(bez zápisu)"){
-          const map = {
-             "sanitka_ok": { who: "sanitka", action: "je objednaná" },
-             "sanitka_req": { who: "sanitku", action: "objednať" }, 
-             "rzp_ok": { who: "RZP", action: "je objednaná" },
-             "rzp_req": { who: "RZP", action: "objednať" },
-             "rlp_ok": { who: "RLP", action: "je objednaná" },
-             "rlp_req": { who: "RLP", action: "objednať" },
-             "sam": { who: "ide sám", action: "" }
-          };
-          let info = map[transType];
-          if(!info) info = { who: transType, action:"" }; 
-
-          let phrase = "";
-          if(transDate){
-             if(transDate === tomorr) phrase += "zajtra";
-             else if(transDate === ref) phrase += "dnes";
-             else phrase += formatDateSK(transDate);
-          }
-          if(transDest) phrase += " " + transDest;
-          if(info.who) phrase += " " + info.who;
-          if(info.action){
-             phrase += " " + info.action;
-             if(transTime) phrase += " na " + transTime;
-          } else {
-              if(transTime) phrase += " " + transTime;
-          }
-          addComma(parts, phrase.trim());
-      }
-
-      // 11. OSTATNÉ
-      if(getVal(`p${i}_status`)) addComma(parts, getVal(`p${i}_status`));
-      if(getVal(`p${i}_drugs`)) addComma(parts, getVal(`p${i}_drugs`));
-      if(getVal(`p${i}_planned`)) addComma(parts, getVal(`p${i}_planned`));
-      if(getVal(`p${i}_done`)) addComma(parts, getVal(`p${i}_done`));
-      if(getVal(`p${i}_note`)) addComma(parts, getVal(`p${i}_note`));
-
-      return { bed, fullname, allergy, isolationHTML, third: parts.join(", ") };
-    });
-  }
-
-  function buildLeftRowsForPrint(){
-    const st = ensureState();
-    const sorted = (st.left||[]).filter(x=>x.end?.discharged || x.end?.transferred || x.end?.exitus);
-    return sorted.map(x=>{
-      const bed = x.bed || "-";
-      const fullname = cleanSpaces(`${x.surname||""} ${x.name||""}`) || "-";
-      const allergy = x.allergy || "";
-      const endLines = [];
-      if(x.end?.discharged) endLines.push("prepustený");
-      if(x.end?.transferred) endLines.push(`preložený: ${x.end?.where || "-"}`);
-      if(x.end?.exitus) endLines.push("EXITUS LETALIS");
-      
-      return { bed, fullname, allergy, third: endLines.join("\n") };
-    });
-  }
-
-  function printFilledIOS(){
-    save(true);
-    const activeRows = buildPrintRowsSorted();
-    const leftRows = buildLeftRowsForPrint();
-    const shift = (document.getElementById("shiftType").value === "nocna") ? "Nočné hlásenie" : "Celodenné hlásenie";
-    const day = formatDateSK(document.getElementById("handoverDay").value);
-    const nurse = document.getElementById("nurseName").value;
-
-    let rowsHTML = activeRows.map(r=>`
-      <div class="r">
-        <div class="c1">${escapeHTML(r.bed)}</div>
-        <div class="c2">
-           <div class="nm">${escapeHTML(r.fullname)}</div>
-           ${r.allergy ? `<div class="aa">AA: ${escapeHTML(r.allergy)}</div>` : ``}
-           ${r.isolationHTML}
-        </div>
-        <div class="c3">${escapeHTML(r.third)}</div>
-      </div>`).join("");
-
-    if(leftRows.length){
-      rowsHTML += `<div style="margin:10px 0; border-top:2px solid #999;"></div><div style="font-size:12px; margin-bottom:6px;"><b>Odídení</b></div>` +
-      leftRows.map(r=>`
-        <div class="r">
-          <div class="c1">${escapeHTML(r.bed)}</div>
-          <div class="c2"><div class="nm">${escapeHTML(r.fullname)}</div>${r.allergy ? `<div class="aa">AA: ${escapeHTML(r.allergy)}</div>` : ``}</div>
-          <div class="c3">${escapeHTML(r.third).replace(/\n/g,"<br>")}</div>
-        </div>`).join("");
-    }
-    if(!rowsHTML) rowsHTML = `<div>(Prázdne)</div>`;
-
-    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Tlač</title>
-      <style>
-        body{font-family:sans-serif; margin:0; padding:0; font-size:13px; line-height:1.35; color:#111;}
-        * { font-family: sans-serif !important; }
-        @page { margin: 8mm; }
-        .head{ font-size:14px; margin-bottom:10px; font-weight:700; }
-        .r{display:grid; grid-template-columns: 62px 200px 1fr; gap:10px; padding:6px 0; border-bottom:1px solid #ddd; align-items:start;}
-        .c1,.nm{font-weight:700; white-space:nowrap;}
-        .aa{font-size:12px;}
-        .c3{white-space:normal; word-break:break-word;}
-      </style></head><body>
-      <div class="head">${escapeHTML(shift)} – ${escapeHTML(day)}, sestra: ${escapeHTML(nurse)}</div>
-      ${rowsHTML}
-      <script>window.onload=()=>window.print();<\/script></body></html>`;
-
-    const w = window.open("", "_blank");
-    if(!w){ alert("Povoľ pop-ups!"); return; }
-    w.document.open(); w.document.write(html); w.document.close();
-  }
-  function exportJSON(){
-    save(true);
-    const blob = new Blob([localStorage.getItem(STORAGE_KEY)||"{}"], {type:"application/json"});
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "Hlasenie_v150_Hybrid.json";
-    document.body.appendChild(a); a.click(); a.remove();
-  }
-
-  let debounceTimer;
-  document.addEventListener("input", (e)=>{
-    if(e.target && e.target.matches("[data-k], #handoverDay, #nurseName")){
-      clearTimeout(debounceTimer); debounceTimer = setTimeout(()=>save(true), 800);
-    }
-  });
-  document.addEventListener("change", (e)=>{
-    if(e.target && e.target.matches("[data-k], #handoverDay, #nurseName, #shiftType")){ syncAllDynamic(); save(); }
-  });
-  document.addEventListener("DOMContentLoaded", ()=>{ render(); defaultHeaderDay(); load(); save(true); });
+  $('prep').classList.remove('show');
+  scanning=true; locked=null; resetStatus();
+  startLoop();
+}
+function errText(e){
+  if(e&&e.name==='NotAllowedError')return 'Prístup ku kamere bol zamietnutý. Otvor súbor v Safari a povoľ kameru.';
+  if(e&&e.name==='NotFoundError')return 'Na zariadení sa nenašla kamera.';
+  return 'Tejto stránke sa nepodarilo získať prístup ku kamere. Skús ju otvoriť v Safari.';
+}
+
+/* ---------- torch ---------- */
+function setupTorch(){
+  try{
+    const cap=track.getCapabilities?track.getCapabilities():{};
+    if(cap.torch){$('torchBtn').style.display='grid';}
+  }catch(e){}
+}
+$('torchBtn').onclick=async()=>{
+  const btn=$('torchBtn');const on=!btn.classList.contains('on');
+  try{await track.applyConstraints({advanced:[{torch:on}]});btn.classList.toggle('on',on);}catch(e){toast('Svetlo sa nedá ovládať');}
+};
+
+/* ---------- scan loop ---------- */
+function startLoop(){clearInterval(loopT);loopT=setInterval(tick,1400);tick();}
+function stopLoop(){clearInterval(loopT);loopT=null;}
+
+async function tick(){
+  if(!scanning||busy||locked||!worker)return;
+  const cv=grabCrop();if(!cv)return;
+  busy=true;
+  try{
+    const {data:{text}}=await worker.recognize(cv);
+    handleText(text||'');
+  }catch(e){/*ignore frame*/}
+  busy=false;
+}
+
+function grabCrop(){
+  const vw=video.videoWidth, vh=video.videoHeight;
+  if(!vw||!vh)return null;
+  const cw=Math.round(vw*0.78), ch=Math.round(vh*0.21);
+  const sx=Math.round((vw-cw)/2), sy=Math.round((vh-ch)/2);
+  const sc=2;
+  canvas.width=cw*sc; canvas.height=ch*sc;
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(video,sx,sy,cw,ch,0,0,canvas.width,canvas.height);
+  // binarize at mean luminance for sharper text
+  const img=ctx.getImageData(0,0,canvas.width,canvas.height);const d=img.data;
+  let sum=0;for(let i=0;i<d.length;i+=4){sum+=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];}
+  const mean=sum/(d.length/4);const thr=mean*0.92;
+  for(let i=0;i<d.length;i+=4){const g=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];const v=g>thr?255:0;d[i]=d[i+1]=d[i+2]=v;}
+  ctx.putImageData(img,0,0);
+  return canvas;
+}
+
+/* ---------- parsing ---------- */
+function parseExp(raw){
+  const T=raw.toUpperCase().replace(/\s+/g,' ');
+  let m;
+  // EXP-anchored: MM YYYY  (e.g. EXP 09/2029, EXP 092029)
+  m=T.match(/EXP\D{0,8}(\d{2})\D{0,2}(\d{4})/); if(m){const r=mk(+m[1],+m[2]);if(r)return r;}
+  // EXP-anchored: MM YY
+  m=T.match(/EXP\D{0,8}(\d{2})\D{0,2}(\d{2})(?!\d)/); if(m){const r=mk(+m[1],2000+ +m[2]);if(r)return r;}
+  // EXP-anchored ISO: YYYY MM
+  m=T.match(/EXP\D{0,8}(20\d{2})\D{0,2}(\d{2})/); if(m){const r=mk(+m[2],+m[1]);if(r)return r;}
+  // generic MM[sep]YYYY
+  m=T.match(/\b(0?[1-9]|1[0-2])[.\/\- ](20\d{2})\b/); if(m){const r=mk(+m[1],+m[2]);if(r)return r;}
+  // generic MM[sep]YY
+  m=T.match(/\b(0?[1-9]|1[0-2])[.\/\-](\d{2})(?!\d)/); if(m){const r=mk(+m[1],2000+ +m[2]);if(r)return r;}
+  // ISO YYYY-MM
+  m=T.match(/\b(20\d{2})[.\/\-](0?[1-9]|1[0-2])\b/); if(m){const r=mk(+m[2],+m[1]);if(r)return r;}
+  // bare 6 digits MMYYYY
+  m=T.match(/(?<!\d)(0[1-9]|1[0-2])(20\d{2})(?!\d)/); if(m){const r=mk(+m[1],+m[2]);if(r)return r;}
+  return null;
+}
+function mk(mo,yr){if(mo<1||mo>12||yr<2000||yr>2099)return null;return{m:mo,y:yr};}
+
+function statusOf(d){
+  const end=new Date(d.y,d.m,0,23,59,59);
+  const days=Math.ceil((end-new Date())/86400000);
+  let lvl='ok';if(days<0)lvl='expired';else if(days<=30)lvl='critical';else if(days<=90)lvl='soon';
+  return{days,lvl};
+}
+const MON=['','jan','feb','mar','apr','máj','jún','júl','aug','sep','okt','nov','dec'];
+function fmt(d){return MON[d.m]+' '+d.y;}
+function plural(n,a,b,c){n=Math.abs(n);if(n===1)return a;if(n>=2&&n<=4)return b;return c;}
+
+/* ---------- result UI ---------- */
+function handleText(text){
+  const d=parseExp(text);
+  if(!d){return;} // keep searching, don't disturb
+  const key=d.m+'-'+d.y;
+  if(stable.key===key)stable.count++; else {stable.key=key;stable.count=1;}
+  if(stable.count>=2){ lock(d); }
+  else { $('scRead').textContent='čítam: '+fmt(d)+' …'; }
+}
+function lock(d){
+  locked=d;
+  const s=statusOf(d);
+  const card=$('statusCard');
+  card.className='status-card live '+s.lvl;
+  let label,sub;
+  if(s.lvl==='expired'){label='EXPIROVANÉ';sub='Pred '+(-s.days)+' '+plural(s.days,'dňom','dňami','dňami');}
+  else if(s.lvl==='critical'){label='EXPIRUJE ČOSKORO';sub=s.days===0?'Expiruje dnes':('o '+s.days+' '+plural(s.days,'deň','dni','dní'));}
+  else if(s.lvl==='soon'){label='ONEDLHO';sub='o '+s.days+' '+plural(s.days,'deň','dni','dní');}
+  else {label='V PORIADKU';const mo=Math.round(s.days/30);sub='o ~'+mo+' '+plural(mo,'mesiac','mesiace','mesiacov');}
+  $('scLabel').textContent=label;
+  $('scSub').textContent=sub;
+  $('scRead').textContent='Dátum spotreby: '+fmt(d);
+  $('saveRow').classList.remove('hidden');
+  if(navigator.vibrate)navigator.vibrate(s.lvl==='expired'?[80,40,80]:30);
+}
+function resetStatus(){
+  locked=null;stable={key:null,count:0};
+  const card=$('statusCard');card.className='status-card live searching';
+  $('scLabel').textContent='Hľadám dátum…';
+  $('scSub').textContent='Drž obal stabilne, ostro a v dobrom svetle';
+  $('scRead').textContent='';
+  $('saveRow').classList.add('hidden');
+}
+$('againBtn').onclick=resetStatus;
+$('saveBtn').onclick=async()=>{
+  if(!locked)return;
+  const s=statusOf(locked);
+  items.unshift({id:Date.now(),m:locked.m,y:locked.y});
+  await persist();
+  toast('Uložené ✓');
+  resetStatus();
+};
+
+/* ---------- list ---------- */
+$('listBtn').onclick=()=>{renderList();show('list');stopLoop();scanning=false;};
+$('backBtn').onclick=()=>{show('cam');scanning=true;resetStatus();startLoop();};
+function renderList(){
+  const body=$('listBody');
+  if(!items.length){body.innerHTML='<div class="empty">Zatiaľ nič uložené.<br>Naskenuj obal a ťukni na „Uložiť".</div>';return;}
+  items.sort((a,b)=>{const da=new Date(a.y,a.m,0),db=new Date(b.y,b.m,0);return da-db;});
+  body.innerHTML=items.map(it=>{
+    const s=statusOf(it);const lab={expired:'Expirované',critical:'Čoskoro',soon:'Onedlho',ok:'V poriadku'}[s.lvl];
+    const rel=s.days<0?('pred '+(-s.days)+' '+plural(s.days,'dňom','dňami','dňami')):('o '+s.days+' '+plural(s.days,'deň','dni','dní'));
+    return `<div class="row ${s.lvl}">
+      <div><b>${fmt(it)}</b><div class="meta">${rel}</div></div>
+      <span class="badge ${s.lvl}">${lab}</span>
+      <button class="del" data-id="${it.id}">×</button>
+    </div>`;
+  }).join('');
+  body.querySelectorAll('.del').forEach(b=>b.onclick=async()=>{items=items.filter(x=>x.id!=b.dataset.id);await persist();renderList();});
+}
+
+/* ---------- cleanup ---------- */
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){stopLoop();}
+  else if(scanning&&$('cam').classList.contains('active')){startLoop();}
+});
+
+(async()=>{await load();})();
 </script>
 </body>
 </html>
